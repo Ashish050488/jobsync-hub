@@ -1,0 +1,42 @@
+{
+  "name": "job-data",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "nodemon src/server.js",
+    "scrape": "node src/tasks/runScraper.js",
+    "validate": "node src/tasks/runValidator.js",
+    "match": "node src/tasks/runMatcher.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "module",
+  "dependencies": {
+    "@google/generative-ai": "^0.24.1",
+    "abort-controller": "^3.0.0",
+    "axios": "^1.12.2",
+    "bcryptjs": "^3.0.3",
+    "cors": "^2.8.5",
+    "csv-parser": "^3.2.0",
+    "dotenv": "^17.2.3",
+    "express": "^5.1.0",
+    "express-validator": "^7.3.1",
+    "groq-sdk": "^0.37.0",
+    "he": "^1.2.0",
+    "jsdom": "^26.1.0",
+    "jsonwebtoken": "^9.0.3",
+    "mongodb": "^6.20.0",
+    "mongoose": "^9.1.5",
+    "node-cron": "^4.2.1",
+    "node-fetch": "^2.7.0",
+    "nodemailer": "^7.0.6",
+    "playwright": "^1.55.0",
+    "puppeteer": "^24.17.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.10"
+  }
+}
