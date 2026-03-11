@@ -38,12 +38,6 @@ export async function scrapeSite(siteConfig, existingIDsMap) {
             
             for (let i = 0; i < jobs.length; i += batchSize) {
                 const batch = jobs.slice(i, i + batchSize);
-                
-                batch.forEach((rawJob, index) => {
-                    const jobTitle = rawJob._source ? rawJob._source.title : (rawJob.titel || rawJob.title || rawJob.PositionTitle || rawJob.job_title || rawJob.name || rawJob.jobFields?.jobTitle);
-                    const jobNumber = offset + i + index + 1;
-                    console.log(`\n  #${jobNumber}: Analyzing: ${jobTitle}`);
-                });
 
                 const jobPromises = batch.map(rawJob => 
                     processJob(rawJob, siteConfig, existingIDs, sessionHeaders)

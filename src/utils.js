@@ -10,12 +10,12 @@ export function StripHtml(html) {
 
 // Banned Roles (Noise Filter) - Keep this strict
 export const BANNED_ROLES = [
-    "intern", "internship", "werkstudent", "werkstudentin", 
-    "working student", "student assistant", "studentische hilfskraft",
-    "ausbildung", "trainee", "duales studium", "apprentice", "apprenticeship",
-    "filialleiter", "filialleitung", "store manager", "shop manager", 
-    "verkäufer", "sales assistant", "cashier",
-    "zeitarbeit", "leiharbeit", "phd thesis", "master thesis", "bachelor thesis"
+    "intern", "internship",
+    "working student", "student assistant",
+    "apprentice", "apprenticeship",
+    "store manager", "shop manager",
+    "sales assistant", "cashier",
+    "phd thesis", "master thesis", "bachelor thesis"
 ];
 
 // ✅ UPDATED: Broader keywords to ensure Engineers/Managers reach the AI layer

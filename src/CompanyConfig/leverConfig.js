@@ -21,38 +21,37 @@ const companySiteNames = [
 
 ];
 
-// German cities for filtering
-const germanCities = [
-  'berlin', 'munich', 'münchen', 'hamburg', 'cologne', 'köln', 
-  'frankfurt', 'stuttgart', 'düsseldorf', 'dusseldorf', 'dortmund',
-  'essen', 'leipzig', 'bremen', 'dresden', 'hanover', 'hannover',
-  'nuremberg', 'nürnberg', 'duisburg', 'bochum', 'wuppertal',
-  'bielefeld', 'bonn', 'münster', 'karlsruhe', 'mannheim',
-  'augsburg', 'wiesbaden', 'mönchengladbach', 'gelsenkirchen',
-  'aachen', 'braunschweig', 'kiel', 'chemnitz', 'halle',
-  'magdeburg', 'freiburg', 'krefeld', 'mainz', 'lübeck',
+// Indian cities for filtering
+const indianCities = [
+  'bangalore', 'bengaluru', 'mumbai', 'delhi', 'new delhi',
+  'hyderabad', 'pune', 'chennai', 'noida', 'gurgaon', 'gurugram',
+  'kolkata', 'ahmedabad', 'jaipur', 'lucknow', 'chandigarh',
+  'indore', 'nagpur', 'coimbatore', 'kochi', 'cochin',
+  'thiruvananthapuram', 'trivandrum', 'visakhapatnam', 'vizag',
+  'bhubaneswar', 'mangalore', 'mysore', 'mysuru', 'vadodara',
+  'surat', 'patna', 'ranchi', 'guwahati', 'bhopal',
 ];
 
-const germanyKeywords = ['germany', 'deutschland', 'de', 'deu'];
+const indiaKeywords = ['india', 'in', 'ind'];
 
 /**
- * Check if job has Germany location
+ * Check if job has India location
  */
 /**
- * Check if job has Germany location
- * FIXED VERSION - More strict filtering
+ * Check if job has India location
+ * Filters for Indian cities and remote jobs
  */
-function hasGermanyLocation(job) {
+function hasIndiaLocation(job) {
   try {
     // 1. CHECK COUNTRY CODE FIRST (MOST RELIABLE!)
     if (job.country) {
       const countryCode = job.country.toLowerCase().trim();
-      // Only accept 'de' or 'deu'
-      if (countryCode === 'de' || countryCode === 'deu') {
+      // Only accept 'in' or 'ind'
+      if (countryCode === 'in' || countryCode === 'ind') {
         return true;
       }
-      // If country is set but NOT Germany, reject immediately
-      if (countryCode !== 'de' && countryCode !== 'deu') {
+      // If country is set but NOT India, reject immediately
+      if (countryCode !== 'in' && countryCode !== 'ind') {
         return false;
       }
     }
@@ -61,8 +60,8 @@ function hasGermanyLocation(job) {
     if (job.categories?.location) {
       const locationLower = job.categories.location.toLowerCase().trim();
       
-      // Exact match for Germany keywords
-      if (germanyKeywords.some(keyword => {
+      // Check for India keywords
+      if (indiaKeywords.some(keyword => {
         return locationLower === keyword || 
                locationLower.includes(`, ${keyword}`) ||
                locationLower.includes(`${keyword},`) ||
@@ -72,12 +71,17 @@ function hasGermanyLocation(job) {
         return true;
       }
       
-      // Check for German cities
-      if (germanCities.some(city => {
+      // Check for Indian cities
+      if (indianCities.some(city => {
         return locationLower === city ||
                locationLower.includes(`, ${city}`) ||
                locationLower.startsWith(`${city},`);
       })) {
+        return true;
+      }
+      
+      // Check for remote
+      if (locationLower.includes('remote')) {
         return true;
       }
     }
@@ -87,8 +91,8 @@ function hasGermanyLocation(job) {
       for (const location of job.categories.allLocations) {
         const locationLower = location.toLowerCase().trim();
         
-        // Exact Germany match
-        if (germanyKeywords.some(keyword => {
+        // India match
+        if (indiaKeywords.some(keyword => {
           return locationLower === keyword || 
                  locationLower.includes(`, ${keyword}`) ||
                  locationLower.includes(`${keyword},`);
@@ -96,33 +100,31 @@ function hasGermanyLocation(job) {
           return true;
         }
         
-        // German cities
-        if (germanCities.some(city => {
+        // Indian cities
+        if (indianCities.some(city => {
           return locationLower === city ||
                  locationLower.includes(`, ${city}`);
         })) {
           return true;
         }
+        
+        // Remote
+        if (locationLower.includes('remote')) {
+          return true;
+        }
       }
     }
 
-    // 4. Remote jobs - ONLY if explicitly mentions Germany
+    // 4. Remote jobs - always accept
     if (job.workplaceType === 'remote') {
-      const descriptionLower = (job.descriptionPlain || '').toLowerCase();
-      
-      // Look for explicit "remote in germany" or "remote - germany"
-      if (descriptionLower.includes('remote in germany') ||
-          descriptionLower.includes('remote - germany') ||
-          descriptionLower.includes('germany remote')) {
-        return true;
-      }
+      return true;
     }
 
-    // DEFAULT: Not a Germany job
+    // DEFAULT: Not an India job
     return false;
     
   } catch (error) {
-    console.error('Error checking Germany location:', error);
+    console.error('Error checking India location:', error);
     return false;
   }
 }
@@ -198,16 +200,16 @@ const leverConfig = {
       });
     }
     
-    // Filter for Germany
-    const germanyJobs = allJobs.filter(hasGermanyLocation);
+    // Filter for India
+    const indiaJobs = allJobs.filter(hasIndiaLocation);
     
-    if (germanyJobs.length > 0) {
-      console.log(`       ✅ Found ${germanyJobs.length} Germany jobs!`);
+    if (indiaJobs.length > 0) {
+      console.log(`       ✅ Found ${indiaJobs.length} India jobs!`);
     } else {
-      console.log(`       ⊘  No Germany jobs (checked ${allJobs.length} jobs)`);
+      console.log(`       ⊘  No India jobs (checked ${allJobs.length} jobs)`);
     }
     
-    return germanyJobs;
+    return indiaJobs;
   },
   
   /**

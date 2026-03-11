@@ -19,7 +19,7 @@ export async function connectToDb() {
         console.log("🍃 Mongoose Connected");
     }
 
-    db = client.db("job-scraper");
+    db = client.db();
     console.log("🗄️  Successfully connected to MongoDB.");
     return db;
 }
@@ -125,10 +125,8 @@ export async function findMatchingJobs(user) {
     const db = await connectToDb();
     const jobsCollection = db.collection('jobs');
     
-    // ✅ REMOVED: LocationClassification check
     const query = {
         Status: 'active',
-        GermanRequired: false,
         Department: { $in: user.desiredDomains },
         JobID: { $nin: user.sentJobIds },
     };
@@ -164,7 +162,6 @@ export async function addCuratedJob(jobData) {
     }
     const jobID = `curated-${new Date().getTime()}`;
     
-    // ✅ REMOVED: LocationClassification
     const jobToSave = createJobModel({
         JobID: jobID,
         JobTitle: jobData.JobTitle,
@@ -172,7 +169,6 @@ export async function addCuratedJob(jobData) {
         Company: jobData.Company,
         Location: jobData.Location,
         Department: jobData.Department,
-        GermanRequired: jobData.GermanRequired ?? false,
         Description: jobData.Description || `Manually curated: ${jobData.JobTitle}`,
         PostedDate: jobData.PostedDate || new Date().toISOString(),
         ContractType: jobData.ContractType,
@@ -207,16 +203,14 @@ export async function getPublicBaitJobs() {
     const db = await connectToDb();
     const jobsCollection = db.collection('jobs');
     
-    // ✅ REMOVED: LocationClassification check
     const jobs = await jobsCollection.find({
-        Status: 'active',
-        GermanRequired: false
+        Status: 'active'
     })
         .sort({ PostedDate: -1, createdAt: -1 })
         .limit(9)
         .project({
             JobTitle: 1, Company: 1, Location: 1, Department: 1,
-            PostedDate: 1, ApplicationURL: 1, GermanRequired: 1
+            PostedDate: 1, ApplicationURL: 1
         })
         .toArray();
     return jobs;
@@ -257,12 +251,7 @@ export async function getJobsPaginated(page = 1, limit = 50, companyFilter = nul
     const jobsCollection = db.collection('jobs');
     const skip = (page - 1) * limit;
 
-    // ✅ REMOVED: LocationClassification check
-    const query = {
-        Status: 'active',
-        thumbStatus: { $ne: 'down' },
-        GermanRequired: false
-    };
+    const query = { Status: 'active' };
 
     if (companyFilter) {
         query.Company = { $regex: companyFilter, $options: 'i' };
@@ -280,81 +269,16 @@ export async function getJobsPaginated(page = 1, limit = 50, companyFilter = nul
     return { jobs, totalJobs, companies };
 }
 
-export async function getRejectedJobs() {
-    const db = await connectToDb();
-    const jobsCollection = db.collection('jobs');
-    return await jobsCollection.find({ 
-        $or: [{ Status: 'rejected' }, { thumbStatus: 'down' }] 
-    })
-        .sort({ updatedAt: -1 })
-        .toArray();
-}
-
-export async function getJobsForReview(page = 1, limit = 50) {
-    const db = await connectToDb();
-    const jobsCollection = db.collection('jobs');
-    const skip = (page - 1) * limit;
-
-    const query = { Status: 'pending_review' };
-
-    const totalJobs = await jobsCollection.countDocuments(query);
-    const jobs = await jobsCollection.find(query)
-        .sort({ ConfidenceScore: -1, scrapedAt: -1 })
-        .skip(skip)
-        .limit(limit)
-        .toArray();
-
-    return {
-        jobs,
-        totalJobs,
-        totalPages: Math.ceil(totalJobs / limit),
-        currentPage: page
-    };
-}
-
-export async function reviewJobDecision(jobId, decision) {
-    const db = await connectToDb();
-    const jobsCollection = db.collection('jobs');
-
-    let newStatus = 'pending_review';
-    if (decision === 'accept') newStatus = 'active';
-    if (decision === 'reject') newStatus = 'rejected';
-
-    await jobsCollection.updateOne(
-        { _id: new ObjectId(jobId) },
-        {
-            $set: {
-                Status: newStatus,
-                reviewedAt: new Date()
-            }
-        }
-    );
-    return { success: true, status: newStatus };
-}
-
-export async function updateJobFeedback(jobId, status) {
-    const db = await connectToDb();
-    const jobsCollection = db.collection('jobs');
-
-    await jobsCollection.updateOne(
-        { _id: new ObjectId(jobId) },
-        { $set: { thumbStatus: status, updatedAt: new Date() } }
-    );
-}
-
 export async function getCompanyDirectoryStats() {
     try {
         const db = await connectToDb();
 
         const jobsCollection = db.collection('jobs');
         
-        // ✅ REMOVED: LocationClassification check
         const pipeline = [
             { 
                 $match: { 
-                    Status: 'active', 
-                    thumbStatus: { $ne: 'down' },
-                    GermanRequired: false
+                    Status: 'active'
                 } 
             },
             {

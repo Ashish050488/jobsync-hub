@@ -2,11 +2,7 @@ import fetch from 'node-fetch';
 import { JSDOM } from 'jsdom';
 import { AbortController } from 'abort-controller';
 
-import { analyzeJobWithGroq } from "../grokAnalyzer.js"; 
 import { createJobModel } from '../models/jobModel.js';
-import { createJobTestLog } from '../models/Jobtestlogmodel.js';
-import { saveJobTestLog } from '../Db/databaseManager.js';
-import { Analytics } from '../models/analyticsModel.js';
 import { BANNED_ROLES } from '../utils.js';
 
 function isSpamOrIrrelevant(title) {
@@ -69,8 +65,6 @@ export async function processJob(rawJob, siteConfig, existingIDs, sessionHeaders
         return null;
     }
 
-    await Analytics.increment('jobsScraped');
-
     // 3. Title Filter
     if (isSpamOrIrrelevant(mappedJob.JobTitle)) {
         console.log(`[Pre-Filter] Rejected: ${mappedJob.JobTitle}`);
@@ -108,58 +102,11 @@ export async function processJob(rawJob, siteConfig, existingIDs, sessionHeaders
     
     if (!mappedJob.Description) return null;
 
-    await Analytics.increment('jobsSentToAI');
+    // Job accepted — save as active
+    mappedJob.Status = "active";
 
-    // ✅ 6. AI CLASSIFICATION - GERMAN ONLY (NO LOCATION CHECK)
-    const aiResult = await analyzeJobWithGroq(mappedJob.JobTitle, mappedJob.Description);
-
-    if (!aiResult) {
-        console.log(`[AI] Failed to analyze ${mappedJob.JobTitle}. Skipping.`);
-        return null;
-    }
-
-    // ✅ 7. FILTERING LOGIC - ONLY CHECK GERMAN REQUIREMENT
-    let finalDecision = "accepted";
-    let rejectionReason = null;
-    
-    if (aiResult.german_required === true) {
-        finalDecision = "rejected";
-        rejectionReason = "German language required";
-        console.log(`❌ [Rejected - German Required] ${mappedJob.JobTitle}`);
-    } else {
-        console.log(`✅ [Valid Job] ${mappedJob.JobTitle} (Confidence: ${aiResult.confidence})`);
-    }
-    
-    // ✅ 8. SAVE TO TEST LOG
-    const testLogData = {
-        ...mappedJob,
-        GermanRequired: aiResult.german_required,
-        Domain: aiResult.domain,
-        SubDomain: aiResult.sub_domain,
-        ConfidenceScore: aiResult.confidence,
-        Evidence: aiResult.evidence,  // ✅ Only contains german_reason
-        FinalDecision: finalDecision,
-        RejectionReason: rejectionReason,
-        Status: finalDecision === "accepted" ? "pending_review" : "rejected"
-    };
-    
-    const jobTestLog = createJobTestLog(testLogData, siteConfig.siteName);
-    await saveJobTestLog(jobTestLog);
-    console.log(`📝 [Test Log] Saved ${finalDecision} job: ${mappedJob.JobTitle}`);
-    
-    // ✅ 9. RETURN NULL IF REJECTED
-    if (finalDecision === "rejected") {
-        return null;
-    }
-
-    await Analytics.increment('jobsPendingReview');
-
-    // 10. Create Model
-    mappedJob.GermanRequired = aiResult.german_required;
-    mappedJob.Domain = aiResult.domain;
-    mappedJob.SubDomain = aiResult.sub_domain;
-    mappedJob.ConfidenceScore = aiResult.confidence;
-    mappedJob.Status = "pending_review";
+    // To fix existing stuck jobs in MongoDB, run manually:
+    // db.jobs.updateMany({ Status: { $in: ["pending", "pending_review", "accepted", "review"] } }, { $set: { Status: "active" } })
 
     return createJobModel(mappedJob, siteConfig.siteName);
 }

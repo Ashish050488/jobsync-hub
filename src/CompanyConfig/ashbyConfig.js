@@ -4,15 +4,15 @@ export const ashbyConfig = {
     siteName: "Ashby Jobs",
     baseUrl: "https://api.ashbyhq.com/posting-api/job-board",
     
-    // ✅ VERIFIED WORKING COMPANIES (with Germany jobs potential)
+    // ✅ VERIFIED WORKING COMPANIES (with India jobs potential)
     companyBoardNames: [
-        // Companies confirmed to have Germany jobs
+        // Companies confirmed to have India jobs
         'Ashby',
         'Deel',
         'OpenAI',
         'Cohere',
         
-        // Additional tech companies using Ashby (verify these)
+        // Additional tech companies using Ashby
         'Linear',
         'Notion',
         'Ramp',
@@ -40,7 +40,7 @@ export const ashbyConfig = {
         'Character',
         'Inflection',
         
-        // European/German companies
+        // India-focused companies
         'Personio',
         'Contentful',
         'Celonis',
@@ -89,17 +89,17 @@ export const ashbyConfig = {
                     continue;
                 }
                 
-                // Filter for Germany jobs
-                const germanyJobs = data.jobs.filter(job => {
-                    return this.hasGermanyLocation(job);
+                // Filter for India jobs
+                const indiaJobs = data.jobs.filter(job => {
+                    return this.hasIndiaLocation(job);
                 }).map(job => ({
                     ...job,
                     _boardName: boardName
                 }));
                 
-                if (germanyJobs.length > 0) {
-                    console.log(`[Ashby] ✅ ${boardName}: ${germanyJobs.length} jobs in Germany (${data.jobs.length} total)`);
-                    this._allJobsQueue.push(...germanyJobs);
+                if (indiaJobs.length > 0) {
+                    console.log(`[Ashby] ✅ ${boardName}: ${indiaJobs.length} jobs in India (${data.jobs.length} total)`);
+                    this._allJobsQueue.push(...indiaJobs);
                     successCount++;
                 }
                 
@@ -112,29 +112,29 @@ export const ashbyConfig = {
             }
         }
         
-        console.log(`[Ashby] ✅ Summary: ${successCount} companies with Germany jobs, ${failCount} failed/empty`);
+        console.log(`[Ashby] ✅ Summary: ${successCount} companies with India jobs, ${failCount} failed/empty`);
         console.log(`[Ashby] 📊 Total jobs found: ${this._allJobsQueue.length}`);
         this._initialized = true;
     },
     
-    // Check if job has Germany location
-    hasGermanyLocation(job) {
-        const germanCities = [
-            'berlin', 'munich', 'münchen', 'hamburg', 'frankfurt', 'cologne', 'köln',
-            'stuttgart', 'düsseldorf', 'dortmund', 'essen', 'leipzig', 'bremen',
-            'dresden', 'hanover', 'hannover', 'nuremberg', 'nürnberg', 'duisburg',
-            'bochum', 'wuppertal', 'bielefeld', 'bonn', 'münster', 'karlsruhe',
-            'mannheim', 'augsburg', 'wiesbaden', 'gelsenkirchen', 'mönchengladbach',
-            'braunschweig', 'chemnitz', 'kiel', 'aachen', 'halle', 'magdeburg',
-            'freiburg', 'krefeld', 'lübeck', 'erfurt', 'mainz', 'rostock'
+    // Check if job has India location
+    hasIndiaLocation(job) {
+        const indianCities = [
+            'bangalore', 'bengaluru', 'mumbai', 'delhi', 'new delhi',
+            'hyderabad', 'pune', 'chennai', 'noida', 'gurgaon', 'gurugram',
+            'kolkata', 'ahmedabad', 'jaipur', 'lucknow', 'chandigarh',
+            'indore', 'nagpur', 'coimbatore', 'kochi', 'cochin',
+            'thiruvananthapuram', 'trivandrum', 'visakhapatnam', 'vizag',
+            'bhubaneswar', 'mangalore', 'mysore', 'mysuru', 'vadodara',
+            'surat', 'patna', 'ranchi', 'guwahati', 'bhopal'
         ];
         
         // Check primary location
         if (job.location) {
             const locationLower = job.location.toLowerCase();
-            if (locationLower.includes('germany') || 
-                locationLower.includes('deutschland') ||
-                germanCities.some(city => locationLower.includes(city))) {
+            if (locationLower.includes('india') || 
+                locationLower.includes('remote') ||
+                indianCities.some(city => locationLower.includes(city))) {
                 return true;
             }
         }
@@ -142,7 +142,7 @@ export const ashbyConfig = {
         // Check address
         if (job.address?.postalAddress?.addressCountry) {
             const country = job.address.postalAddress.addressCountry.toLowerCase();
-            if (country.includes('germany') || country.includes('deutschland') || country === 'de' || country === 'deu') {
+            if (country.includes('india') || country === 'in' || country === 'ind') {
                 return true;
             }
         }
@@ -152,29 +152,24 @@ export const ashbyConfig = {
             for (const secLoc of job.secondaryLocations) {
                 if (secLoc.location) {
                     const locLower = secLoc.location.toLowerCase();
-                    if (locLower.includes('germany') || 
-                        locLower.includes('deutschland') ||
-                        germanCities.some(city => locLower.includes(city))) {
+                    if (locLower.includes('india') || 
+                        locLower.includes('remote') ||
+                        indianCities.some(city => locLower.includes(city))) {
                         return true;
                     }
                 }
                 if (secLoc.address?.addressCountry) {
                     const country = secLoc.address.addressCountry.toLowerCase();
-                    if (country.includes('germany') || country.includes('deutschland') || country === 'de' || country === 'deu') {
+                    if (country.includes('india') || country === 'in' || country === 'ind') {
                         return true;
                     }
                 }
             }
         }
         
-        // Check if remote is allowed AND location contains "Remote"
-        if (job.isRemote && job.location) {
-            const locationLower = job.location.toLowerCase();
-            // Only consider as Germany if explicitly mentions Germany with Remote
-            if ((locationLower.includes('germany') || locationLower.includes('deutschland')) && 
-                locationLower.includes('remote')) {
-                return true;
-            }
+        // Check if remote
+        if (job.isRemote) {
+            return true;
         }
         
         return false;
@@ -225,38 +220,40 @@ export const ashbyConfig = {
     
     // Extract location
     extractLocation(job) {
-        // Combine all Germany locations
+        // Combine all India locations
         let locations = [];
         
-        // Add primary location if it's Germany
-        if (job.location && this.isGermanyString(job.location)) {
+        // Add primary location if it's India
+        if (job.location && this.isIndiaString(job.location)) {
             locations.push(job.location);
         }
         
-        // Add secondary Germany locations
+        // Add secondary India locations
         if (job.secondaryLocations && job.secondaryLocations.length > 0) {
             for (const secLoc of job.secondaryLocations) {
-                if (secLoc.location && this.isGermanyString(secLoc.location)) {
+                if (secLoc.location && this.isIndiaString(secLoc.location)) {
                     locations.push(secLoc.location);
                 }
             }
         }
         
-        return locations.length > 0 ? locations.join(', ') : 'Germany';
+        return locations.length > 0 ? locations.join(', ') : 'India';
     },
     
-    // Helper to check if a location string is Germany-related
-    isGermanyString(locationStr) {
-        const germanCities = [
-            'berlin', 'munich', 'münchen', 'hamburg', 'frankfurt', 'cologne', 'köln',
-            'stuttgart', 'düsseldorf', 'dortmund', 'essen', 'leipzig', 'bremen',
-            'dresden', 'hanover', 'hannover', 'nuremberg', 'nürnberg'
+    // Helper to check if a location string is India-related
+    isIndiaString(locationStr) {
+        const indianCities = [
+            'bangalore', 'bengaluru', 'mumbai', 'delhi', 'new delhi',
+            'hyderabad', 'pune', 'chennai', 'noida', 'gurgaon', 'gurugram',
+            'kolkata', 'ahmedabad', 'jaipur', 'lucknow', 'chandigarh',
+            'indore', 'nagpur', 'coimbatore', 'kochi', 'cochin',
+            'thiruvananthapuram', 'trivandrum'
         ];
         
         const locLower = locationStr.toLowerCase();
-        return locLower.includes('germany') || 
-               locLower.includes('deutschland') ||
-               germanCities.some(city => locLower.includes(city));
+        return locLower.includes('india') || 
+               locLower.includes('remote') ||
+               indianCities.some(city => locLower.includes(city));
     },
     
     // Extract description

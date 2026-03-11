@@ -4,12 +4,10 @@ import cors from 'cors';
 import cron from 'node-cron';
 import { client, connectToDb } from './Db/databaseManager.js';
 import { runScraper } from './tasks/runScraper.js';
-import { runValidator } from './tasks/runValidator.js';
 import { runMatcher } from './tasks/runMatcher.js';
 import { jobsApiRouter } from './api/jobs.routes.js';
 import { usersApiRouter } from './api/users.routes.js';
 import { authRouter } from './api/auth.routes.js';
-import { analyticsRouter } from './api/analytics.routes.js';
 
 // --- Setup ---
 const app = express();
@@ -23,7 +21,6 @@ app.use(express.json()); // Allow the server to understand JSON request bodies
 app.use('/api/auth', authRouter);
 app.use('/api/jobs', jobsApiRouter); // All job-related routes are in a separate file
 app.use('/api/users', usersApiRouter);
-app.use('/api/analytics', analyticsRouter);
 // --- Health Check Endpoint ---
 app.get('/', (req, res) => {
     res.send('Job Scraper Backend is running and healthy.');
@@ -42,12 +39,6 @@ app.listen(PORT, async () => {
         cron.schedule('0 6 * * *', () => {
             console.log('--- Cron Job: Running Scraper ---');
             runScraper();
-        });
-
-        // Run the validator script once per day at 2:00 AM (No Change)
-        cron.schedule('0 2 * * *', () => {
-            console.log('--- Cron Job: Running Validator ---');
-            runValidator();
         });
 
         // ✅ UPDATED: Run the email matcher script every two days at 8:00 AM

@@ -1,6 +1,6 @@
 /**
  * Job Model - NO LOCATION CLASSIFICATION
- * All jobs assumed to be in Germany (pre-filtered by sources/configs)
+ * All jobs assumed to be in India (pre-filtered by sources/configs)
  */
 
 const jobSchemaDefinition = {
@@ -12,14 +12,8 @@ const jobSchemaDefinition = {
     Location: { type: String, default: "N/A" }, // ✅ Raw location (not classified)
     Company: { type: String, default: "N/A" },
     
-    // --- CLASSIFICATION FIELDS ---
-    GermanRequired: { type: Boolean, default: false },
-    Domain: { type: String, default: "Unclear" },
-    SubDomain: { type: String, default: "Other" },
-    ConfidenceScore: { type: Number, default: 0 },
-    
     // --- WORKFLOW STATUS ---
-    Status: { type: String, default: "pending_review" },
+    Status: { type: String, default: "active" },
 
     Department: { type: String, default: "N/A" },
     ContractType: { type: String, default: "N/A" },
@@ -27,8 +21,7 @@ const jobSchemaDefinition = {
     PostedDate: { type: Date, default: null },
     createdAt: { type: Date },
     updatedAt: { type: Date },
-    scrapedAt: { type: Date },
-    thumbStatus: { type: String, default: null }
+    scrapedAt: { type: Date }
 };
 
 class Job {
