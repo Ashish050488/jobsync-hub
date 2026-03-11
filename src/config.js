@@ -7,7 +7,7 @@ import { ashbyConfig } from './CompanyConfig/ashbyConfig.js';
 import { leverConfig } from './CompanyConfig/leverConfig.js';
 
 export const SITES_CONFIG = [
-  // greenhouseConfig,
-  // ashbyConfig,
+  greenhouseConfig,
+  ashbyConfig,
   leverConfig
 ];

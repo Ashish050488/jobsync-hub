@@ -133,7 +133,6 @@ export const ashbyConfig = {
         if (job.location) {
             const locationLower = job.location.toLowerCase();
             if (locationLower.includes('india') || 
-                locationLower.includes('remote') ||
                 indianCities.some(city => locationLower.includes(city))) {
                 return true;
             }
@@ -153,7 +152,6 @@ export const ashbyConfig = {
                 if (secLoc.location) {
                     const locLower = secLoc.location.toLowerCase();
                     if (locLower.includes('india') || 
-                        locLower.includes('remote') ||
                         indianCities.some(city => locLower.includes(city))) {
                         return true;
                     }
@@ -165,11 +163,6 @@ export const ashbyConfig = {
                     }
                 }
             }
-        }
-        
-        // Check if remote
-        if (job.isRemote) {
-            return true;
         }
         
         return false;
@@ -252,7 +245,6 @@ export const ashbyConfig = {
         
         const locLower = locationStr.toLowerCase();
         return locLower.includes('india') || 
-               locLower.includes('remote') ||
                indianCities.some(city => locLower.includes(city));
     },
     
@@ -269,6 +261,6 @@ export const ashbyConfig = {
     
     // Extract posted date
     extractPostedDate(job) {
-        return job.publishedAt;
+        return job.publishedDate;
     }
 };

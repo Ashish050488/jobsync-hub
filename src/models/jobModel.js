@@ -9,9 +9,9 @@ const jobSchemaDefinition = {
     JobTitle: { type: String, required: true, trim: true },
     ApplicationURL: { type: String, required: true },
     Description: { type: String, default: "" },
-    Location: { type: String, default: "N/A" }, // ✅ Raw location (not classified)
+    Location: { type: String, default: "N/A" },
     Company: { type: String, default: "N/A" },
-    
+
     // --- WORKFLOW STATUS ---
     Status: { type: String, default: "active" },
 
@@ -21,7 +21,33 @@ const jobSchemaDefinition = {
     PostedDate: { type: Date, default: null },
     createdAt: { type: Date },
     updatedAt: { type: Date },
-    scrapedAt: { type: Date }
+    scrapedAt: { type: Date },
+
+    // --- ATS source data ---
+    DirectApplyURL: { type: String, default: null },
+    Team: { type: String, default: null },
+    AllLocations: { type: Array, default: [] },
+    Tags: { type: Array, default: [] },
+    WorkplaceType: { type: String, default: null },
+    IsRemote: { type: Boolean, default: null },
+
+    // --- Description variants ---
+    DescriptionPlain: { type: String, default: null },
+    DescriptionLists: { type: Array, default: [] },
+    AdditionalInfo: { type: String, default: null },
+
+    // --- Salary ---
+    SalaryMin: { type: Number, default: null },
+    SalaryMax: { type: Number, default: null },
+    SalaryCurrency: { type: String, default: null },
+    SalaryInterval: { type: String, default: null },
+    SalaryInfo: { type: String, default: null },
+
+    // --- Office/Location detail ---
+    Office: { type: String, default: null },
+
+    // --- ATS platform ---
+    ATSPlatform: { type: String, default: null },
 };
 
 class Job {

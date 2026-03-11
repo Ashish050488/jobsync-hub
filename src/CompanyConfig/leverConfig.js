@@ -16,7 +16,82 @@ const LEVER_BASE_URL = 'https://api.lever.co/v0/postings';
  */
 const companySiteNames = [
   // Tech companies with frequent job postings
- 'welocalize'
+//  'welocalize',
+ 'jumpcloud',
+  'meesho',
+  '3pillarglobal',
+  'stable-money1',
+  'jobgether',
+  'retailmenot',
+  'paytm',
+  'lingarogroup',
+  'gohighlevel',
+  'crypto',
+  'smart-working-solutions',
+  'egen',
+  'saviynt',
+  'rackspace',
+  'Allata',
+  'entrata',
+  'aeratechnology',
+  'SymmetrySystems',
+  'clovirtualfashion',
+  'klearnow',
+  'coupa',
+  'nium',
+  'foxitsoftware',
+  'rapidai',
+  'veeva',
+  'binance',
+  'jiostar',
+  'ion',
+  'everbridge',
+  'highspot',
+  'better',
+  'thinkahead',
+  'acceldata',
+  'alifsemi',
+  'idt',
+  'Brillio',
+  'ShopBack',
+  'hevodata',
+  'findem',
+  'accurate',
+  'tryjeeves',
+  'spreetail',
+  'mythic-ai',
+  'pattern',
+  'nextgenfed',
+  'economicmodeling',
+  'weekdayworks',
+  'gushwork',
+  'megaport',
+  'spotify',
+  'certik',
+  'regrello',
+  'zeta',
+  'fampay',
+  'coatesgroup',
+  'xsolla',
+  'lucidworks',
+  'floqast',
+  'zuru',
+  'sysdig',
+  'palantir',
+  'valdera',
+  'Zeller',
+  'extremenetworks',
+  'getwingapp',
+  'plaid',
+  'drivetrain',
+  'matchgroup',
+  'ninjavan',
+  'erg',
+  'actian',
+  'Sprinto',
+  'mactores',
+  'zimperium',
+  '100ms',
   
 
 ];
@@ -80,10 +155,6 @@ function hasIndiaLocation(job) {
         return true;
       }
       
-      // Check for remote
-      if (locationLower.includes('remote')) {
-        return true;
-      }
     }
 
     // 3. Check all locations array
@@ -107,17 +178,7 @@ function hasIndiaLocation(job) {
         })) {
           return true;
         }
-        
-        // Remote
-        if (locationLower.includes('remote')) {
-          return true;
-        }
       }
-    }
-
-    // 4. Remote jobs - always accept
-    if (job.workplaceType === 'remote') {
-      return true;
     }
 
     // DEFAULT: Not an India job

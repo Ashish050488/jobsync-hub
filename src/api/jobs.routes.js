@@ -28,7 +28,9 @@ jobsApiRouter.get('/', async (req, res) => {
         const page = parseInt(req.query.page) || 1;
         const limit = parseInt(req.query.limit) || 50;
         const company = req.query.company || null;
-        const data = await getJobsPaginated(page, limit, company);
+        const platform = req.query.platform || null;
+        const remote = req.query.remote || null;
+        const data = await getJobsPaginated(page, limit, company, platform, remote);
         res.status(200).json(data);
     } catch (error) {
         res.status(500).json({ error: "Failed to fetch jobs" });

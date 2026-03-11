@@ -180,7 +180,7 @@ export async function getPublicBaitJobs() {
 
 
 
-export async function getJobsPaginated(page = 1, limit = 50, companyFilter = null) {
+export async function getJobsPaginated(page = 1, limit = 50, companyFilter = null, platformFilter = null, remoteFilter = null) {
     const db = await connectToDb();
     const jobsCollection = db.collection('jobs');
     const skip = (page - 1) * limit;
@@ -190,17 +190,24 @@ export async function getJobsPaginated(page = 1, limit = 50, companyFilter = nul
     if (companyFilter) {
         query.Company = { $regex: companyFilter, $options: 'i' };
     }
+    if (platformFilter) {
+        query.ATSPlatform = platformFilter;
+    }
+    if (remoteFilter) {
+        query.IsRemote = true;
+    }
 
     const totalJobs = await jobsCollection.countDocuments(query);
     const jobs = await jobsCollection.find(query)
         .sort({ PostedDate: -1, createdAt: -1 })
         .skip(skip)
         .limit(limit)
+        .project({ __v: 0 })
         .toArray();
 
     const companies = await jobsCollection.distinct('Company', { Status: 'active' });
 
-    return { jobs, totalJobs, companies };
+    return { jobs, totalJobs, totalPages: Math.ceil(totalJobs / limit), currentPage: page, companies };
 }
 
 export async function getCompanyDirectoryStats() {

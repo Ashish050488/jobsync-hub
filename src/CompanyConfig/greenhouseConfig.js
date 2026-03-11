@@ -216,7 +216,6 @@ export const greenhouseConfig = {
         
         // Check for India or IN
         if (locationLower.includes('india') || 
-            locationLower.includes('remote') ||
             locationLower.match(/\bin\b/)) {
             return true;
         }
