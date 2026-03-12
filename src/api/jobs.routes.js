@@ -6,6 +6,7 @@ import {
     deleteJobById,
     getPublicBaitJobs,
     getCompanyDirectoryStats,
+    findJobById,
 } from '../Db/databaseManager.js';
 
 export const jobsApiRouter = Router();
@@ -30,7 +31,23 @@ jobsApiRouter.get('/', async (req, res) => {
         const company = req.query.company || null;
         const platform = req.query.platform || null;
         const remote = req.query.remote || null;
-        const data = await getJobsPaginated(page, limit, company, platform, remote);
+        const entryLevel = req.query.entryLevel || null;
+        const roleCategory = req.query.roleCategory || null;
+        const experienceBand = req.query.experienceBand || null;
+        const techStack = typeof req.query.techStack === 'string'
+            ? req.query.techStack.split(',').map(tag => tag.trim()).filter(Boolean)
+            : [];
+        const data = await getJobsPaginated(
+            page,
+            limit,
+            company,
+            platform,
+            remote,
+            entryLevel,
+            roleCategory,
+            experienceBand,
+            techStack,
+        );
         res.status(200).json(data);
     } catch (error) {
         res.status(500).json({ error: "Failed to fetch jobs" });
@@ -43,6 +60,18 @@ jobsApiRouter.get('/directory', async (req, res) => {
         res.status(200).json(directory);
     } catch (error) {
         res.status(500).json({ error: "Failed to load directory" });
+    }
+});
+
+jobsApiRouter.get('/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        if (!ObjectId.isValid(id)) return res.status(400).json({ error: 'Invalid ID' });
+        const job = await findJobById(id);
+        if (!job) return res.status(404).json({ error: 'Job not found' });
+        res.status(200).json(job);
+    } catch (error) {
+        res.status(500).json({ error: 'Failed to fetch job' });
     }
 });
 

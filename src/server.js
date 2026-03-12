@@ -5,6 +5,8 @@ import cron from 'node-cron';
 import { client, connectToDb } from './Db/databaseManager.js';
 import { runScraper } from './tasks/runScraper.js';
 import { jobsApiRouter } from './api/jobs.routes.js';
+import usersRouter from './api/users.routes.js';
+import { ensureUserIndexes } from './models/userModel.js';
 
 // --- Setup ---
 const app = express();
@@ -16,6 +18,7 @@ app.use(express.json());
 
 // --- API Routes ---
 app.use('/api/jobs', jobsApiRouter);
+app.use('/api/users', usersRouter);
 
 // --- Health Check Endpoint ---
 app.get('/', (req, res) => {
@@ -26,6 +29,7 @@ app.get('/', (req, res) => {
 app.listen(PORT, async () => {
     try {
         await connectToDb();
+        await ensureUserIndexes();
         console.log(`API Server is running on http://localhost:${PORT}`);
 
         // Run the scraper every day at 6:00 AM

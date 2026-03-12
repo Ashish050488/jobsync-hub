@@ -114,10 +114,20 @@ function mapGreenhouseJob(raw, companyName, sourceSite) {
     const depts = Array.isArray(raw.departments) ? raw.departments : [];
     const offices = Array.isArray(raw.offices) ? raw.offices : [];
 
-    // Infer remote from location string
+    // Infer workplace type from location string
     const locName = (raw.location?.name || '').toLowerCase();
-    const isRemote = locName.includes('remote') || null;
-    const workplaceType = isRemote ? 'remote' : null;
+    let workplaceType = null;
+    let isRemote = null;
+    if (locName.includes('remote')) {
+        workplaceType = 'remote';
+        isRemote = true;
+    } else if (locName.includes('hybrid')) {
+        workplaceType = 'hybrid';
+        isRemote = false;
+    } else if (locName) {
+        workplaceType = 'on-site';
+        isRemote = false;
+    }
 
     // Build AllLocations from offices
     const allLocs = offices.map(o => o.name).filter(Boolean);
@@ -178,6 +188,17 @@ function mapAshbyJob(raw, companyName, sourceSite) {
         }
     }
 
+    // Determine workplace type
+    const locLower = (raw.location || '').toLowerCase();
+    let ashbyWorkplace = null;
+    if (raw.isRemote === true) {
+        ashbyWorkplace = 'remote';
+    } else if (locLower.includes('hybrid')) {
+        ashbyWorkplace = 'hybrid';
+    } else if (raw.isRemote === false) {
+        ashbyWorkplace = 'on-site';
+    }
+
     return {
         JobID: raw.id || null,
         JobTitle: raw.title || null,
@@ -190,7 +211,7 @@ function mapAshbyJob(raw, companyName, sourceSite) {
         Team: raw.team?.name || null,
         Office: null,
         ContractType: normalizeEmploymentType(raw.employmentType),
-        WorkplaceType: raw.isRemote === true ? 'remote' : null,
+        WorkplaceType: ashbyWorkplace,
         IsRemote: raw.isRemote ?? null,
         Tags: [],
         Description: raw.descriptionHtml || null,
@@ -336,8 +357,7 @@ export async function processJob(rawJob, siteConfig, existingIDs, sessionHeaders
     // Job accepted — save as active
     mappedJob.Status = "active";
 
-    // To fix existing stuck jobs in MongoDB, run manually:
-    // db.jobs.updateMany({ Status: { $in: ["pending", "pending_review", "accepted", "review"] } }, { $set: { Status: "active" } })
+
 
     return createJobModel(mappedJob, siteConfig.siteName);
 }

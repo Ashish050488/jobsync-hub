@@ -180,7 +180,17 @@ export async function getPublicBaitJobs() {
 
 
 
-export async function getJobsPaginated(page = 1, limit = 50, companyFilter = null, platformFilter = null, remoteFilter = null) {
+export async function getJobsPaginated(
+    page = 1,
+    limit = 50,
+    companyFilter = null,
+    platformFilter = null,
+    remoteFilter = null,
+    entryLevelFilter = null,
+    roleCategoryFilter = null,
+    experienceBandFilter = null,
+    techStackFilter = [],
+) {
     const db = await connectToDb();
     const jobsCollection = db.collection('jobs');
     const skip = (page - 1) * limit;
@@ -195,6 +205,18 @@ export async function getJobsPaginated(page = 1, limit = 50, companyFilter = nul
     }
     if (remoteFilter) {
         query.IsRemote = true;
+    }
+    if (entryLevelFilter) {
+        query.isEntryLevel = true;
+    }
+    if (roleCategoryFilter) {
+        query['autoTags.roleCategory'] = roleCategoryFilter;
+    }
+    if (experienceBandFilter) {
+        query['autoTags.experienceBand'] = experienceBandFilter;
+    }
+    if (Array.isArray(techStackFilter) && techStackFilter.length > 0) {
+        query['autoTags.techStack'] = { $all: techStackFilter };
     }
 
     const totalJobs = await jobsCollection.countDocuments(query);
