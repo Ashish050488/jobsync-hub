@@ -25,6 +25,15 @@ export async function scrapeSite(siteConfig, existingIDsMap) {
             const scrapeStartTime = new Date();
             console.log(`[${siteName}] Fetching page with offset: ${offset}...`);
             const data = await fetchJobsPage(siteConfig, offset, limit, sessionHeaders);
+
+            // null means a skippable error (e.g. 404 for one Lever company).
+            // Do NOT break — just advance to the next page/company.
+            if (data === null) {
+                hasMore = shouldContinuePaging(siteConfig, [], offset, limit, totalJobs);
+                offset += limit;
+                continue;
+            }
+
             const jobs = siteConfig.getJobs(data);
 
             if (!jobs || jobs.length === 0) {

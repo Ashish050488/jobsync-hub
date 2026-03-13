@@ -87,6 +87,14 @@ export async function fetchJobsPage(siteConfig, offset, limit, sessionHeaders) {
         }
 
         const res = await fetch(currentApiUrl, fetchOptions);
+
+        // 404 means the resource doesn't exist (e.g. a Lever company slug is invalid).
+        // Return null so the caller can skip this item and continue the loop.
+        if (res.status === 404) {
+            console.warn(`[${siteConfig.siteName}] 404 for URL: ${currentApiUrl} — skipping.`);
+            return null;
+        }
+
         if (!res.ok) throw new Error(`API error: ${res.status}`);
         
         return await res.json();
