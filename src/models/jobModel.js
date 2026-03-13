@@ -158,7 +158,6 @@ const jobSchema = new mongoose.Schema(jobSchemaDefinition, {
     versionKey: false,
 });
 
-jobSchema.index({ JobID: 1 }, { unique: true });
 jobSchema.index({ scrapedAt: 1 }, { expireAfterSeconds: 7 * 24 * 60 * 60 });
 
 jobSchema.pre('save', function onSave(next) {

@@ -9,6 +9,7 @@ export async function scrapeSite(siteConfig, existingIDsMap) {
     const existingIDs = existingIDsMap.get(siteName) || new Set();
     const seenInRun = new Set();
     const allNewJobs = [];
+    const PROCESS_CONCURRENCY = 10;
     
     const limit = siteConfig.limit || 20;
     let offset = 0;
@@ -34,39 +35,33 @@ export async function scrapeSite(siteConfig, existingIDsMap) {
                 totalJobs = siteConfig.getTotal(data);
             }
 
-            // Batch size 1 = Sequential processing
-            const batchSize = 1; 
-            
-            for (let i = 0; i < jobs.length; i += batchSize) {
-                const batch = jobs.slice(i, i + batchSize);
+            const collectedForPage = [];
 
-                const jobPromises = batch.map(rawJob => 
-                    processJob(rawJob, siteConfig, existingIDs, sessionHeaders)
+            for (let i = 0; i < jobs.length; i += PROCESS_CONCURRENCY) {
+                const chunk = jobs.slice(i, i + PROCESS_CONCURRENCY);
+                const processedJobs = await Promise.all(
+                    chunk.map(rawJob => processJob(rawJob, siteConfig, existingIDs, sessionHeaders))
                 );
-                
-                const processedJobs = await Promise.all(jobPromises);
-                const newJobsInBatch = processedJobs.filter(job => job !== null);
-                const uniqueJobsInBatch = newJobsInBatch.filter(job => {
-                    if (!job?.JobID) return false;
-                    if (seenInRun.has(job.JobID)) return false;
+
+                for (const job of processedJobs) {
+                    if (!job?.JobID) continue;
+                    if (seenInRun.has(job.JobID)) continue;
                     seenInRun.add(job.JobID);
-                    return true;
-                });
-
-                if (uniqueJobsInBatch.length > 0) {
-                    console.log(`   -> Saving ${uniqueJobsInBatch.length} valid job(s)...`);
-                    const jobsToSave = uniqueJobsInBatch.map(job => ({ ...job, scrapedAt: scrapeStartTime }));
-                    await saveJobs(jobsToSave);
-                    
-                    allNewJobs.push(...uniqueJobsInBatch);
-                    uniqueJobsInBatch.forEach(job => existingIDs.add(job.JobID));
-                }
-
-                // ✅ FIX: Sleep 10 seconds to ensure we stay under the rate limit
-                if (i + batchSize < jobs.length) {
-                    await sleep(10000); 
+                    collectedForPage.push(job);
                 }
             }
+
+            if (collectedForPage.length > 0) {
+                console.log(`   -> Saving ${collectedForPage.length} valid job(s)...`);
+                const jobsToSave = collectedForPage.map(job => ({ ...job, scrapedAt: scrapeStartTime }));
+                await saveJobs(jobsToSave);
+
+                allNewJobs.push(...collectedForPage);
+                collectedForPage.forEach(job => existingIDs.add(job.JobID));
+            }
+
+            // Small inter-page pause to reduce ATS pressure without per-job slowdown
+            await sleep(350);
             
             hasMore = shouldContinuePaging(siteConfig, jobs, offset, limit, totalJobs);
             offset += limit;

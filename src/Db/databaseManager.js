@@ -80,7 +80,8 @@ export async function saveJobs(jobs) {
         };
     });
 
-    await jobsCollection.bulkWrite(operations);
+    if (operations.length === 0) return;
+    await jobsCollection.bulkWrite(operations, { ordered: false });
 }
 
 export async function saveJobTestLog(jobTestLog) {
