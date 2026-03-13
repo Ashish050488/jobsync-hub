@@ -1,5 +1,6 @@
 import { connectToDb } from '../src/Db/databaseManager.js';
 import { cleanJobDescription } from '../src/core/cleanJobDescription.js';
+import { generateJobTags, getPlainTextForTagging } from '../src/core/generateJobTags.js';
 
 async function run() {
     console.log('[migrate-clean-descriptions] Connecting to database...');
@@ -24,9 +25,28 @@ async function run() {
 
         try {
             const cleaned = cleanJobDescription(job.Description, job.Company);
+            const descriptionPlain = getPlainTextForTagging({
+                Description: job.Description,
+                DescriptionCleaned: cleaned,
+            });
+            const autoTags = generateJobTags({
+                ...job,
+                Description: job.Description,
+                DescriptionCleaned: cleaned,
+                DescriptionPlain: descriptionPlain,
+            });
+
             await jobsCollection.updateOne(
                 { _id: job._id },
-                { $set: { DescriptionCleaned: cleaned } }
+                {
+                    $set: {
+                        DescriptionCleaned: cleaned,
+                        DescriptionPlain: descriptionPlain || null,
+                        autoTags,
+                        isEntryLevel: autoTags.isEntryLevel,
+                        updatedAt: new Date(),
+                    },
+                }
             );
         } catch (error) {
             errors += 1;

@@ -8,6 +8,6 @@ import { leverConfig } from './CompanyConfig/leverConfig.js';
 
 export const SITES_CONFIG = [
   greenhouseConfig,
-  ashbyConfig,
-  leverConfig
+  // ashbyConfig,
+  // leverConfig
 ];

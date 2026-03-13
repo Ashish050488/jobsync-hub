@@ -11,6 +11,7 @@ import { ObjectId } from 'mongodb';
  *   createdAt    Date
  *   lastVisitAt  Date
  *   appliedJobs  { jobId: string, appliedAt: Date }[]
+ *   appliedCount number (persistent historical total, never decremented)
  *   skills       string[]  (user's known tech skills for description highlighting)
  *   comeBackTo   { jobId: string, note: string, addedAt: Date }[]  (active intent flags)
  *   dailyGoal    number   (default: 5, range: 1-50, daily application target)
@@ -27,6 +28,10 @@ async function usersCol() {
 export async function ensureUserIndexes() {
     const col = await usersCol();
     await col.createIndex({ slug: 1 }, { unique: true });
+    await col.updateMany(
+        { appliedCount: { $exists: false } },
+        [{ $set: { appliedCount: { $size: { $ifNull: ['$appliedJobs', []] } } } }],
+    );
 }
 
 /** Return all users (name + slug only) */
@@ -40,7 +45,14 @@ export async function getAllUsers() {
 /** Return full user doc by slug */
 export async function getUserBySlug(slug) {
     const col = await usersCol();
-    return col.findOne({ slug });
+    const user = await col.findOne({ slug });
+    if (!user) return null;
+    return {
+        ...user,
+        appliedCount: typeof user.appliedCount === 'number'
+            ? user.appliedCount
+            : normaliseApplied(user.appliedJobs).length,
+    };
 }
 
 /** Create a new user (name → slug). Returns the inserted doc. */
@@ -58,6 +70,10 @@ export async function createUser(name) {
         createdAt: new Date(),
         lastVisitAt: new Date(),
         appliedJobs: [],
+        appliedCount: 0,
+        skills: [],
+        comeBackTo: [],
+        dailyGoal: 5,
     };
     await col.insertOne(doc);
     return doc;
@@ -141,27 +157,30 @@ export async function getAppliedJobDetails(slug) {
 
 /**
  * Add a jobId to appliedJobs.
- * Uses $pull + $push to replace any legacy string entry or update existing.
- * Idempotent: if already present as an object, replaces it with a fresh timestamp.
+ * Increments appliedCount only when this jobId is newly added.
  */
 export async function addAppliedJob(slug, jobId) {
     const col = await usersCol();
-    // Remove any existing entry (string or object) for this jobId first
+    // Remove legacy string form first
     await col.updateOne(
         { slug },
         { $pull: { appliedJobs: jobId } },  // removes legacy string form
     );
-    await col.updateOne(
-        { slug },
-        { $pull: { appliedJobs: { jobId } } },  // removes object form
-    );
-    // Push fresh entry
+
+    // Add only if not already present, and bump persistent counter once
     const result = await col.findOneAndUpdate(
-        { slug },
-        { $push: { appliedJobs: { jobId, appliedAt: new Date() } } },
+        { slug, 'appliedJobs.jobId': { $ne: jobId } },
+        {
+            $push: { appliedJobs: { jobId, appliedAt: new Date() } },
+            $inc: { appliedCount: 1 },
+        },
         { returnDocument: 'after' },
     );
-    return result ? normaliseApplied(result.appliedJobs) : null;
+
+    if (result) return normaliseApplied(result.appliedJobs);
+
+    const existing = await col.findOne({ slug }, { projection: { appliedJobs: 1, _id: 0 } });
+    return existing ? normaliseApplied(existing.appliedJobs) : null;
 }
 
 /** Remove a jobId from appliedJobs (handles both string and object form) */

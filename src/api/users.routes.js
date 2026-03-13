@@ -92,8 +92,7 @@ router.delete('/:slug/applied/:jobId', async (req, res) => {
     }
 });
 
-// PUT /api/users/:slug/skills — set skills array
-router.put('/:slug/skills', async (req, res) => {
+const handleUpdateSkills = async (req, res) => {
     try {
         const { skills } = req.body;
         if (!Array.isArray(skills)) {
@@ -128,7 +127,13 @@ router.put('/:slug/skills', async (req, res) => {
         console.error('[users] PUT skills error:', err);
         res.status(500).json({ error: 'Failed to update skills' });
     }
-});
+};
+
+// PUT /api/users/:slug/skills — set skills array
+router.put('/:slug/skills', handleUpdateSkills);
+
+// PATCH /api/users/:slug/skills — set skills array
+router.patch('/:slug/skills', handleUpdateSkills);
 
 // GET /api/users/:slug/comeback — return comeBackTo array
 router.get('/:slug/comeback', async (req, res) => {

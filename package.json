@@ -9,7 +9,8 @@
     "scrape": "node src/tasks/runScraper.js",
     "validate": "node src/tasks/runValidator.js",
     "match": "node src/tasks/runMatcher.js",
-    "migrate:auto-tags": "node scripts/migrate-auto-tags.js"
+    "migrate:auto-tags": "node scripts/migrate-auto-tags.js",
+    "migrate:clean-descriptions": "node scripts/migrate-clean-descriptions.js"
   },
   "keywords": [],
   "author": "",

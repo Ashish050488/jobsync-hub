@@ -7,6 +7,7 @@ import { sleep } from '../utils.js';
 export async function scrapeSite(siteConfig, existingIDsMap) {
     const siteName = siteConfig.siteName;
     const existingIDs = existingIDsMap.get(siteName) || new Set();
+    const seenInRun = new Set();
     const allNewJobs = [];
     
     const limit = siteConfig.limit || 20;
@@ -45,14 +46,20 @@ export async function scrapeSite(siteConfig, existingIDsMap) {
                 
                 const processedJobs = await Promise.all(jobPromises);
                 const newJobsInBatch = processedJobs.filter(job => job !== null);
+                const uniqueJobsInBatch = newJobsInBatch.filter(job => {
+                    if (!job?.JobID) return false;
+                    if (seenInRun.has(job.JobID)) return false;
+                    seenInRun.add(job.JobID);
+                    return true;
+                });
 
-                if (newJobsInBatch.length > 0) {
-                    console.log(`   -> Saving ${newJobsInBatch.length} valid job(s)...`);
-                    const jobsToSave = newJobsInBatch.map(job => ({ ...job, scrapedAt: scrapeStartTime }));
+                if (uniqueJobsInBatch.length > 0) {
+                    console.log(`   -> Saving ${uniqueJobsInBatch.length} valid job(s)...`);
+                    const jobsToSave = uniqueJobsInBatch.map(job => ({ ...job, scrapedAt: scrapeStartTime }));
                     await saveJobs(jobsToSave);
                     
-                    allNewJobs.push(...newJobsInBatch);
-                    newJobsInBatch.forEach(job => existingIDs.add(job.JobID));
+                    allNewJobs.push(...uniqueJobsInBatch);
+                    uniqueJobsInBatch.forEach(job => existingIDs.add(job.JobID));
                 }
 
                 // ✅ FIX: Sleep 10 seconds to ensure we stay under the rate limit

@@ -3,6 +3,8 @@ import { MongoClient, ObjectId } from 'mongodb';
 import mongoose from 'mongoose';
 import { MONGO_URI } from '../env.js';
 import { SITES_CONFIG } from '../config.js';
+import { cleanJobDescription } from '../core/cleanJobDescription.js';
+import { generateJobTags, getPlainTextForTagging } from '../core/generateJobTags.js';
 
 export const client = new MongoClient(MONGO_URI);
 let db;
@@ -42,18 +44,36 @@ export async function saveJobs(jobs) {
     const db = await connectToDb();
     const jobsCollection = db.collection('jobs');
 
-    const operations = jobs.map(job => {
+    const dedupedJobs = [];
+    const seenJobIds = new Set();
+    for (const job of jobs) {
+        if (!job?.JobID || seenJobIds.has(job.JobID)) continue;
+        seenJobIds.add(job.JobID);
+        dedupedJobs.push(job);
+    }
+
+    const operations = dedupedJobs.map(inputJob => {
+        const job = { ...inputJob };
+
+        if (job.Description) {
+            job.DescriptionCleaned = cleanJobDescription(job.Description, job.Company);
+            job.DescriptionPlain = getPlainTextForTagging(job);
+            const autoTags = generateJobTags(job);
+            job.autoTags = autoTags;
+            job.isEntryLevel = autoTags.isEntryLevel;
+        }
+
         const { createdAt, updatedAt, ...pureJobData } = job;
         return {
             updateOne: {
-                filter: { JobID: job.JobID, sourceSite: job.sourceSite },
+                filter: { JobID: job.JobID },
                 update: {
-                    $set: {
+                    $setOnInsert: {
                         ...pureJobData,
+                        createdAt: new Date(),
                         updatedAt: new Date(),
                         scrapedAt: new Date()
-                    },
-                    $setOnInsert: { createdAt: new Date() }
+                    }
                 },
                 upsert: true,
             },

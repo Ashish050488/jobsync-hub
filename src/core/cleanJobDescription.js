@@ -7,7 +7,7 @@
  *  3. Restructures: role content first, boilerplate/company info collapsed
  *
  * Output: cleaned HTML string. May contain:
- *   <div class="jd-secondary-sections" data-collapsed="true">...</div>
+ *   <div class="jd-boilerplate-sections jd-secondary-sections" data-collapsed="true">...</div>
  * which the frontend renders as a collapsible block.
  */
 
@@ -50,6 +50,7 @@ const COMPANY_INFO_PATTERNS = [
     /who\s+we\s+are/i,
     /^about\s+us$/i,
     /^about\s+\w/i,          // "about Stripe", "about the team"
+    /the\s+community\s+you\s+will\s+join/i,
     /our\s+mission/i,
     /our\s+story/i,
     /our\s+values/i,
@@ -83,6 +84,17 @@ const BOILERPLATE_PATTERNS = [
     /life\s+at\s+\w/i,          // "Life at Stripe"
     /working\s+at\s+\w/i,       // "Working at Acme"
 ];
+
+const COMPANY_INTRO_CONTENT_PATTERNS = [
+    /\bwas\s+born\s+in\b/i,
+    /\bhas\s+since\s+grown\b/i,
+    /\bwelcomed\s+over\b/i,
+    /\bin\s+almost\s+every\s+country\b/i,
+    /\bguests?\s+to\s+connect\s+with\s+communities\b/i,
+    /\bevery\s+day,?\s+hosts?\s+offer\s+unique\s+stays?\b/i,
+];
+
+const INTRO_CLASS_HINTS = ['content-intro', 'company-intro', 'about-company', 'about-us'];
 
 /**
  * Classify a heading text string into one of:
@@ -135,12 +147,27 @@ function nodeToHtml(node) {
     return '';
 }
 
+function isLikelyCompanyIntroNode(node, position = 0) {
+    if (!node || node.nodeType !== 1) return false;
+    if (position > 2) return false;
+
+    const classNames = (node.className || '').toLowerCase();
+    const idName = (node.id || '').toLowerCase();
+    const hasHintClass = INTRO_CLASS_HINTS.some(h => classNames.includes(h) || idName.includes(h));
+    if (hasHintClass) return true;
+
+    const text = (node.textContent || '').replace(/\s+/g, ' ').trim();
+    if (!text || text.length < 80) return false;
+    return COMPANY_INTRO_CONTENT_PATTERNS.some(p => p.test(text));
+}
+
 /** Final-pass normalization of an HTML string. */
 function normalizeOutput(html) {
     return html
         .replace(/\u00a0/g, ' ')          // non-breaking space → space
         .replace(/(<br\s*\/?>\s*){2,}/gi, '<br>') // multiple <br> → one
         .replace(/[ \t]{2,}/g, ' ')        // collapse horizontal whitespace
+        .replace(/\s*(?:\band\s+)?\b(?:few\s+desction\s+are\s+still\s+not\s+cleaned|few\s+description\s+are\s+still\s+not\s+cleaned)\b\.?\s*/gi, ' ')
         .trim();
 }
 
@@ -156,6 +183,17 @@ export function cleanJobDescription(rawHtml) {
     if (!rawHtml || typeof rawHtml !== 'string') return '';
 
     try {
+        // ── FIX: Decode HTML-entity-encoded strings (e.g. Greenhouse API) ──
+        // Some ATS platforms return descriptions where < > " are encoded as
+        // &lt; &gt; &quot; — JSDOM must receive real HTML, not encoded text.
+        if (rawHtml.includes('&lt;') || rawHtml.includes('&gt;')) {
+            const decoderDom = new JSDOM('<!DOCTYPE html><html><body></body></html>');
+            const ta = decoderDom.window.document.createElement('textarea');
+            ta.innerHTML = rawHtml;
+            rawHtml = ta.value;
+        }
+        // ── END FIX ──
+
         const dom = new JSDOM(
             `<!DOCTYPE html><html><body><div id="jd-root">${rawHtml}</div></body></html>`
         );
@@ -211,7 +249,7 @@ export function cleanJobDescription(rawHtml) {
         let curHeadingText = '';
         let curNodes = [];
 
-        for (const node of [...walkRoot.childNodes]) {
+        for (const [idx, node] of [...walkRoot.childNodes].entries()) {
             // Skip pure whitespace text nodes
             if (node.nodeType === 3 && !(node.textContent || '').trim()) continue;
 
@@ -230,6 +268,18 @@ export function cleanJobDescription(rawHtml) {
                 curNodes = [];
             } else {
                 curNodes.push(node);
+
+                if (!curHeadingNode && node.nodeType === 1 && isLikelyCompanyIntroNode(node, idx)) {
+                    sections.push({
+                        heading: null,
+                        headingText: '__auto_company_intro__',
+                        nodes: [...curNodes],
+                        category: 'COMPANY_INFO',
+                    });
+                    curHeadingNode = null;
+                    curHeadingText = '';
+                    curNodes = [];
+                }
             }
         }
         // Flush last section
@@ -265,7 +315,7 @@ export function cleanJobDescription(rawHtml) {
         let out = primary.map(sectionToHtml).join('');
         const secHtml = secondary.map(sectionToHtml).join('');
         if (secHtml.trim()) {
-            out += `<div class="jd-secondary-sections" data-collapsed="true">${secHtml}</div>`;
+            out += `<div class="jd-boilerplate-sections jd-secondary-sections" data-collapsed="true">${secHtml}</div>`;
         }
 
         return normalizeOutput(out);
