@@ -1,4 +1,5 @@
 import fetch from 'node-fetch';
+import { AbortController } from 'abort-controller';
 
 /**
  * LEVER CONFIGURATION - EXPANDED VERSION
@@ -204,9 +205,60 @@ const leverConfig = {
   
   // Each "page" = one company
   limit: 1,
+
+  // Keep paging through company list even when one company has zero jobs
+  ignoreLengthCheck: true,
   
   // Base URL
   baseUrl: LEVER_BASE_URL,
+
+  // Total pseudo-pages = total companies configured
+  getTotal: () => companySiteNames.length,
+
+  /**
+   * Fetch one company's postings and swallow transient/per-company failures.
+   * This method must never throw; return [] to skip and continue.
+   */
+  fetchPage: async (offset, limit) => {
+    const companyIndex = offset;
+
+    if (companyIndex >= companySiteNames.length) {
+      return [];
+    }
+
+    const siteName = companySiteNames[companyIndex];
+    const url = `${LEVER_BASE_URL}/${siteName}?mode=json`;
+    console.log(`\n[Lever] 🔍 Company ${companyIndex + 1}/${companySiteNames.length}: ${siteName}`);
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 15000);
+
+    try {
+      const res = await fetch(url, {
+        headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)' },
+        signal: controller.signal,
+      });
+
+      clearTimeout(timeoutId);
+
+      if (res.status === 404) {
+        console.log(`[Lever] ⚠️  ${siteName}: 404 — slug may be dead, skipping`);
+        return [];
+      }
+
+      if (!res.ok) {
+        console.warn(`[Lever] ⚠️  ${siteName}: HTTP ${res.status} — skipping`);
+        return [];
+      }
+
+      return await res.json();
+    } catch (err) {
+      clearTimeout(timeoutId);
+      const reason = err?.name === 'AbortError' ? '15s timeout' : (err?.message || 'request failed');
+      console.warn(`[Lever] ⚠️  ${siteName}: ${reason} — skipping`);
+      return [];
+    }
+  },
   
   /**
    * Build URL for current company

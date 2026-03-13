@@ -24,7 +24,15 @@ export async function scrapeSite(siteConfig, existingIDsMap) {
         while (hasMore) {
             const scrapeStartTime = new Date();
             console.log(`[${siteName}] Fetching page with offset: ${offset}...`);
-            const data = await fetchJobsPage(siteConfig, offset, limit, sessionHeaders);
+            let data;
+            try {
+                data = await fetchJobsPage(siteConfig, offset, limit, sessionHeaders);
+            } catch (pageError) {
+                console.warn(`[${siteName}] Skipping offset ${offset}: ${pageError.message}`);
+                hasMore = shouldContinuePaging(siteConfig, [], offset, limit, totalJobs);
+                offset += limit;
+                continue;
+            }
 
             // null means a skippable error (e.g. 404 for one Lever company).
             // Do NOT break — just advance to the next page/company.
@@ -37,6 +45,11 @@ export async function scrapeSite(siteConfig, existingIDsMap) {
             const jobs = siteConfig.getJobs(data);
 
             if (!jobs || jobs.length === 0) {
+                if (siteConfig.ignoreLengthCheck) {
+                    hasMore = shouldContinuePaging(siteConfig, [], offset, limit, totalJobs);
+                    offset += limit;
+                    continue;
+                }
                 break;
             }
 

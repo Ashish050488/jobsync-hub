@@ -8,16 +8,20 @@
  * @returns {boolean} True if the scraper should continue, false otherwise.
  */
 export function shouldContinuePaging(siteConfig, jobs, offset, limit, totalJobs) {
-    if (jobs.length === 0) {
+    const pageJobs = Array.isArray(jobs) ? jobs : [];
+
+    if (siteConfig.ignoreLengthCheck) {
+        const total = siteConfig.getTotal ? siteConfig.getTotal(null) : Infinity;
+        return (offset + limit) < total;
+    }
+
+    if (pageJobs.length === 0) {
         return false;
     }
     if (siteConfig.getTotal) {
-        return (offset + jobs.length) < totalJobs;
+        return (offset + pageJobs.length) < totalJobs;
     }
-    if (siteConfig.ignoreLengthCheck) {
-        return true; // Keep going until jobs.length is 0
-    }
-    if (jobs.length < limit) {
+    if (pageJobs.length < limit) {
         return false;
     }
     return true;

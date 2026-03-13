@@ -9,7 +9,7 @@ import { cleanJobDescription } from '../core/cleanJobDescription.js';
 import { generateJobTags, getPlainTextForTagging } from '../core/generateJobTags.js';
 
 export const jobSchemaDefinition = {
-    JobID: { type: String, required: true, unique: true },
+    JobID: { type: String, required: true },
     sourceSite: { type: String, required: true },
     JobTitle: { type: String, required: true, trim: true },
     ApplicationURL: { type: String, required: true },
@@ -158,6 +158,7 @@ const jobSchema = new mongoose.Schema(jobSchemaDefinition, {
     versionKey: false,
 });
 
+jobSchema.index({ JobID: 1 }, { unique: true });
 jobSchema.index({ scrapedAt: 1 }, { expireAfterSeconds: 7 * 24 * 60 * 60 });
 
 jobSchema.pre('save', function onSave(next) {
