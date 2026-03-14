@@ -6,9 +6,34 @@ const companySlugs = [
   // 2. The subdomain is the slug: https://{slug}.recruitee.com
   // 3. Verify: curl https://{slug}.recruitee.com/api/offers/ | jq '.offers | length'
   //
-  // Add verified slugs below:
+//   // Add verified slugs below:
+
+
+
+'kcoverseaseducation',
+'holepunch',
+'samy1',
+'o2h',
+'frisbii',
+'synapseanalytics',
+'blackbelt',
+'trafilea',
+'somniosoftware',
+'bettercollective',
+'careersdeltacapita',
+'xogene',
+'jobsdeerns',
+'devfinders',
+'consultdss',
+'infoprolearning',
+'gustileder',
+
   'box8',    // Poncho Hospitality Pvt. Ltd. (5 India jobs)
   'mgid',
+'transperfect',
+'tether',
+'fullcreative',  
+  'hudsonmanpower'
 ];
 
 const indianCities = [
