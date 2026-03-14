@@ -56,6 +56,14 @@ export const ashbyConfig = {
         'Zalando',
         'HelloFresh',
         'Rocket-Internet',
+
+        // ── Discovered via API scan ──
+        'confluent',
+        'snowflake',
+        'redis',
+        'clickup',
+        'anyscale',
+        'docker',
     ],
     
     // Internal state

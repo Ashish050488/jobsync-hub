@@ -6,10 +6,12 @@ import { greenhouseConfig } from './CompanyConfig/greenhouseConfig.js';
 import { ashbyConfig } from './CompanyConfig/ashbyConfig.js';
 import { leverConfig } from './CompanyConfig/leverConfig.js';
 import { workableConfig } from './CompanyConfig/workableConfig.js';
+import { recruiteeConfig } from './CompanyConfig/recruiteeConfig.js';
 
 export const SITES_CONFIG = [
-  // greenhouseConfig,
-  // ashbyConfig,
-  // leverConfig,
+  greenhouseConfig,
+  ashbyConfig,
+  leverConfig,
   workableConfig,
+  recruiteeConfig,
 ];

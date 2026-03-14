@@ -93,6 +93,15 @@ const companySiteNames = [
   'mactores',
   'zimperium',
   '100ms',
+
+  // ── Discovered via API scan ──
+  'dreamsports',
+  'mindtickle',
+  'upstox',
+  'dozee',
+  'outreach',
+  'cred',
+  'sophos',
   
 
 ];

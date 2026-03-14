@@ -53,6 +53,79 @@ export const SENIOR_REJECT_KEYWORDS = [
     'iii', 'iv', ' ii ', 'level ii',
 ];
 
+export const TECH_ROLE_KEYWORDS = [
+    // Software Development
+    'software', 'developer', 'development', 'sde', 'swe',
+    'programmer', 'coder', 'coding',
+    'fullstack', 'full stack', 'full-stack',
+    'frontend', 'front end', 'front-end',
+    'backend', 'back end', 'back-end',
+    'mern', 'mean', 'node', 'react', 'angular', 'vue',
+    'java', 'python', 'javascript', 'typescript', 'golang', 'go ',
+    'ruby', 'php', 'c++', 'c#', '.net', 'rust', 'kotlin', 'swift',
+
+    // Data & AI
+    'data analyst', 'data engineer', 'data scientist', 'data science',
+    'machine learning', 'ml engineer', 'ai engineer', 'deep learning',
+    'nlp', 'computer vision',
+    'business analyst', 'product analyst', 'analytics',
+
+    // DevOps & Cloud & Infra
+    'devops', 'dev ops', 'sre', 'site reliability',
+    'cloud', 'aws', 'azure', 'gcp',
+    'infrastructure', 'platform engineer',
+    'kubernetes', 'docker', 'terraform',
+    'system admin', 'sysadmin', 'systems engineer',
+    'network engineer', 'network admin',
+
+    // QA & Testing
+    'qa', 'quality assurance', 'tester', 'testing',
+    'sdet', 'test engineer', 'automation engineer',
+
+    // Security
+    'security engineer', 'cybersecurity', 'cyber security',
+    'infosec', 'soc analyst', 'penetration',
+
+    // Design (tech)
+    'ui/ux', 'ui ux', 'ux designer', 'ui designer',
+    'product designer', 'ux researcher',
+
+    // IT & Support
+    'it support', 'it engineer', 'it admin',
+    'technical support', 'tech support',
+    'helpdesk', 'help desk',
+
+    // Product & Project (tech context)
+    'product manager', 'product owner', 'scrum master',
+    'project engineer', 'technical project',
+
+    // Database
+    'database', 'dba', 'sql', 'mongodb', 'postgres',
+    'etl', 'data warehouse',
+
+    // Embedded & Hardware (tech)
+    'embedded', 'firmware', 'iot',
+    'hardware engineer', 'vlsi', 'asic', 'fpga',
+    'electronic engineer', 'electronics engineer',
+
+    // Mobile
+    'mobile developer', 'android', 'ios developer',
+    'flutter', 'react native',
+
+    // Other tech
+    'api', 'microservice', 'blockchain', 'web developer', 'web3',
+    'game developer', 'graphics engineer',
+    'technical writer', 'tech writer',
+    'erp', 'sap', 'salesforce', 'crm developer',
+    'linux', 'unix',
+
+    // Generic tech titles used in India
+    'engineer', 'analyst',
+    'trainee', 'intern', 'fresher',
+    'associate', 'junior', 'jr',
+    'graduate engineer', 'get ', 'graduate trainee',
+];
+
 // ✅ UPDATED: Broader keywords to ensure Engineers/Managers reach the AI layer
 export const COMMON_KEYWORDS = [
     // Tech

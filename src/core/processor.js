@@ -3,18 +3,19 @@ import { JSDOM } from 'jsdom';
 import { AbortController } from 'abort-controller';
 
 import { createJobModel } from '../models/jobModel.js';
-import { BANNED_ROLES, SENIOR_REJECT_KEYWORDS } from '../utils.js';
+import { BANNED_ROLES, SENIOR_REJECT_KEYWORDS, TECH_ROLE_KEYWORDS } from '../utils.js';
 
 function isSpamOrIrrelevant(title) {
     const lowerTitle = title.toLowerCase();
     return BANNED_ROLES.some(role => lowerTitle.includes(role));
 }
 
-// ─── Entry-level gate: reject only if a senior keyword matches (blacklist approach)
-// Whitelist caused 88% false rejection on valid Indian job titles (exec, technician, etc.)
+// ─── Entry-level gate: reject senior titles and require a tech-role keyword
 function isEntryLevel(title) {
     const t = title.toLowerCase();
-    return !SENIOR_REJECT_KEYWORDS.some(kw => t.includes(kw));
+    if (SENIOR_REJECT_KEYWORDS.some(kw => t.includes(kw))) return false;
+    if (!TECH_ROLE_KEYWORDS.some(kw => t.includes(kw))) return false;
+    return true;
 }
 
 // ─── Infer ExperienceLevel from title ────────────────────────────
@@ -301,6 +302,98 @@ function mapAshbyJob(raw, companyName, sourceSite) {
     };
 }
 
+// ─── RECRUITEE FIELD MAPPING ────────────────────────────────────
+function normalizeRecruiteeEmploymentType(rawCode) {
+    const map = {
+        fulltime: 'Full-time',
+        parttime: 'Part-time',
+        internship: 'Internship',
+        freelance: 'Freelance',
+        contract: 'Contract',
+        temporary: 'Temporary',
+    };
+    return map[rawCode] || rawCode || null;
+}
+
+function normalizeRecruiteeWorkplace(raw) {
+    if (raw.hybrid === true) return { workplaceType: 'hybrid', isRemote: false };
+    if (raw.remote === true && raw.on_site === true) return { workplaceType: 'hybrid', isRemote: false };
+    if (raw.remote === true) return { workplaceType: 'remote', isRemote: true };
+    if (raw.on_site === true) return { workplaceType: 'on-site', isRemote: false };
+    return { workplaceType: null, isRemote: null };
+}
+
+function mapRecruiteeJob(raw, companyName, sourceSite) {
+    let postedDate = null;
+    if (raw.published_at) {
+        postedDate = new Date(raw.published_at);
+        if (isNaN(postedDate.getTime())) postedDate = null;
+    }
+    if (!postedDate && raw.created_at) {
+        postedDate = new Date(raw.created_at);
+        if (isNaN(postedDate.getTime())) postedDate = null;
+    }
+
+    const allLocs = Array.isArray(raw.locations)
+        ? raw.locations
+            .map(loc => [loc.city, loc.state, loc.country].filter(Boolean).join(', '))
+            .filter(Boolean)
+        : [];
+
+    let primaryLoc = null;
+    if (Array.isArray(raw.locations) && raw.locations.length > 0) {
+        const indiaLoc = raw.locations.find(loc =>
+            loc?.country_code === 'IN'
+            || (loc?.country && String(loc.country).toLowerCase() === 'india')
+        );
+        const chosen = indiaLoc || raw.locations[0];
+        primaryLoc = [chosen?.city, chosen?.state, chosen?.country].filter(Boolean).join(', ') || null;
+    }
+
+    const descriptionParts = [raw.description, raw.requirements].filter(Boolean);
+    const descriptionHtml = descriptionParts.join('\n\n') || null;
+    const descriptionPlain = descriptionHtml
+        ? descriptionHtml.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim()
+        : null;
+
+    const workplace = normalizeRecruiteeWorkplace(raw);
+
+    return {
+        JobID: raw.id ? String(raw.id) : null,
+        JobTitle: raw.title || null,
+        Company: raw.company_name || companyName,
+        ApplicationURL: raw.careers_apply_url || raw.careers_url || null,
+        DirectApplyURL: raw.careers_apply_url || null,
+        Location: primaryLoc,
+        AllLocations: allLocs,
+        Department: raw.department || null,
+        Team: null,
+        Office: null,
+        ContractType: normalizeRecruiteeEmploymentType(raw.employment_type_code),
+        WorkplaceType: workplace.workplaceType,
+        IsRemote: workplace.isRemote,
+        Tags: Array.isArray(raw.tags) ? raw.tags : [],
+        Description: descriptionHtml,
+        DescriptionPlain: descriptionPlain,
+        DescriptionLists: [],
+        AdditionalInfo: [
+            raw.category_code ? `Category: ${raw.category_code}` : null,
+            raw.education_code ? `Education: ${raw.education_code}` : null,
+        ].filter(Boolean).join(' | ') || null,
+        SalaryMin: raw.salary?.min ?? null,
+        SalaryMax: raw.salary?.max ?? null,
+        SalaryCurrency: raw.salary?.currency || null,
+        SalaryInterval: raw.salary?.period || null,
+        SalaryInfo: null,
+        ExperienceLevel: raw.experience_code || null,
+        PostedDate: postedDate,
+        sourceSite: sourceSite,
+        ATSPlatform: 'recruitee',
+        Status: 'active',
+        scrapedAt: new Date(),
+    };
+}
+
 async function scrapeJobDetailsFromPage(mappedJob, siteConfig) {
     console.log(`[${siteConfig.siteName}] Visiting job page: ${mappedJob.ApplicationURL}`);
     const pageController = new AbortController();
@@ -341,6 +434,7 @@ export async function processJob(rawJob, siteConfig, existingIDs, sessionHeaders
     const isGreenhouse = siteName.toLowerCase().includes('greenhouse');
     const isAshby = siteName.toLowerCase().includes('ashby');
     const isWorkable = siteName.toLowerCase().includes('workable');
+    const isRecruitee = siteName.toLowerCase().includes('recruitee');
 
     // Extract job data using rich mappers
     let mappedJob;
@@ -363,6 +457,11 @@ export async function processJob(rawJob, siteConfig, existingIDs, sessionHeaders
         const companyName = siteConfig.extractCompany ? siteConfig.extractCompany(rawJob) : siteName;
         const jobID = siteConfig.extractJobID ? siteConfig.extractJobID(rawJob) : rawJob.shortcode;
         mappedJob = mapWorkableJob(rawJob, companyName, siteName);
+        mappedJob.JobID = jobID;
+    } else if (isRecruitee) {
+        const companyName = siteConfig.extractCompany ? siteConfig.extractCompany(rawJob) : siteName;
+        const jobID = siteConfig.extractJobID ? siteConfig.extractJobID(rawJob) : rawJob.id;
+        mappedJob = mapRecruiteeJob(rawJob, companyName, siteName);
         mappedJob.JobID = jobID;
     } else if (siteConfig.extractJobID) {
         // Fallback for unknown platforms using legacy extractors
@@ -397,7 +496,7 @@ export async function processJob(rawJob, siteConfig, existingIDs, sessionHeaders
     }
 
     // 3c. Set ExperienceLevel
-    mappedJob.ExperienceLevel = inferExperienceLevel(mappedJob.JobTitle);
+    mappedJob.ExperienceLevel = mappedJob.ExperienceLevel || inferExperienceLevel(mappedJob.JobTitle);
 
     // 4. Keyword Match
     if (siteConfig.filterKeywords && siteConfig.filterKeywords.length > 0) {
