@@ -3,20 +3,18 @@ import { JSDOM } from 'jsdom';
 import { AbortController } from 'abort-controller';
 
 import { createJobModel } from '../models/jobModel.js';
-import { BANNED_ROLES, ENTRY_LEVEL_KEYWORDS, SENIOR_REJECT_KEYWORDS } from '../utils.js';
+import { BANNED_ROLES, SENIOR_REJECT_KEYWORDS } from '../utils.js';
 
 function isSpamOrIrrelevant(title) {
     const lowerTitle = title.toLowerCase();
     return BANNED_ROLES.some(role => lowerTitle.includes(role));
 }
 
-// ─── Entry-level gate: must match at least one entry keyword AND none of the senior keywords
+// ─── Entry-level gate: reject only if a senior keyword matches (blacklist approach)
+// Whitelist caused 88% false rejection on valid Indian job titles (exec, technician, etc.)
 function isEntryLevel(title) {
     const t = title.toLowerCase();
-    const hasSenior = SENIOR_REJECT_KEYWORDS.some(kw => t.includes(kw));
-    if (hasSenior) return false;
-    const hasEntry = ENTRY_LEVEL_KEYWORDS.some(kw => t.includes(kw));
-    return hasEntry;
+    return !SENIOR_REJECT_KEYWORDS.some(kw => t.includes(kw));
 }
 
 // ─── Infer ExperienceLevel from title ────────────────────────────
@@ -167,6 +165,78 @@ function mapGreenhouseJob(raw, companyName, sourceSite) {
     };
 }
 
+// ─── WORKABLE FIELD MAPPING ─────────────────────────────────────
+function mapWorkableJob(raw, companyName, sourceSite) {
+    let postedDate = null;
+    if (raw.published_on) {
+        postedDate = new Date(raw.published_on);
+        if (isNaN(postedDate.getTime())) postedDate = null;
+    }
+    if (!postedDate && raw.created_at) {
+        postedDate = new Date(raw.created_at);
+        if (isNaN(postedDate.getTime())) postedDate = null;
+    }
+
+    const wt = raw.workplace_type;
+    let workplaceType = null;
+    let isRemote = null;
+    if (wt === 'remote') {
+        workplaceType = 'remote';
+        isRemote = true;
+    } else if (wt === 'hybrid') {
+        workplaceType = 'hybrid';
+        isRemote = false;
+    } else if (wt === 'on_site') {
+        workplaceType = 'on-site';
+        isRemote = false;
+    } else if (raw.telecommuting === true) {
+        workplaceType = 'remote';
+        isRemote = true;
+    }
+
+    const locationParts = [raw.city, raw.state, raw.country].filter(Boolean);
+    const location = locationParts.join(', ') || null;
+    const allLocs = location ? [location] : [];
+
+    const descPlain = raw.description
+        ? raw.description.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim()
+        : null;
+
+    return {
+        JobID: raw.shortcode || null,       // overwritten by extractJobID
+        JobTitle: raw.title || null,
+        Company: companyName,
+        ApplicationURL: raw.application_url || raw.shortlink || raw.url || null,
+        DirectApplyURL: raw.application_url || null,
+        Location: location,
+        AllLocations: allLocs,
+        Department: raw.department || null,
+        Team: null,
+        Office: null,
+        ContractType: raw.employment_type || null,
+        WorkplaceType: workplaceType,
+        IsRemote: isRemote,
+        Tags: [],
+        Description: raw.description || null,
+        DescriptionPlain: descPlain,
+        DescriptionLists: [],
+        AdditionalInfo: [
+            raw.experience ? `Experience: ${raw.experience}` : null,
+            raw.education ? `Education: ${raw.education}` : null,
+        ].filter(Boolean).join(' | ') || null,
+        SalaryMin: null,
+        SalaryMax: null,
+        SalaryCurrency: null,
+        SalaryInterval: null,
+        SalaryInfo: null,
+        PostedDate: postedDate,
+        sourceSite: sourceSite,
+        ATSPlatform: 'workable',
+        Status: 'active',
+        scrapedAt: new Date(),
+    };
+}
+
 // ─── ASHBY FIELD MAPPING ─────────────────────────────────────────
 function mapAshbyJob(raw, companyName, sourceSite) {
     let postedDate = null;
@@ -270,6 +340,7 @@ export async function processJob(rawJob, siteConfig, existingIDs, sessionHeaders
     const isLever = siteName.toLowerCase().includes('lever');
     const isGreenhouse = siteName.toLowerCase().includes('greenhouse');
     const isAshby = siteName.toLowerCase().includes('ashby');
+    const isWorkable = siteName.toLowerCase().includes('workable');
 
     // Extract job data using rich mappers
     let mappedJob;
@@ -287,6 +358,11 @@ export async function processJob(rawJob, siteConfig, existingIDs, sessionHeaders
         const companyName = siteConfig.extractCompany ? siteConfig.extractCompany(rawJob) : siteName;
         const jobID = siteConfig.extractJobID ? siteConfig.extractJobID(rawJob) : rawJob.id;
         mappedJob = mapAshbyJob(rawJob, companyName, siteName);
+        mappedJob.JobID = jobID;
+    } else if (isWorkable) {
+        const companyName = siteConfig.extractCompany ? siteConfig.extractCompany(rawJob) : siteName;
+        const jobID = siteConfig.extractJobID ? siteConfig.extractJobID(rawJob) : rawJob.shortcode;
+        mappedJob = mapWorkableJob(rawJob, companyName, siteName);
         mappedJob.JobID = jobID;
     } else if (siteConfig.extractJobID) {
         // Fallback for unknown platforms using legacy extractors
