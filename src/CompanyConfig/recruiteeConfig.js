@@ -33,7 +33,19 @@ const companySlugs = [
 'transperfect',
 'tether',
 'fullcreative',  
-  'hudsonmanpower'
+    'hudsonmanpower',
+
+    // ── Discovered via ATS scan (Mar 2026) ──
+    'ampere',
+    'ramco',
+    'talentica',
+    'kpit',
+    'publicissapient',
+    'flipkart',
+    'lenskart',
+    'blinkit',
+    'angelone',
+    'caratlane'
 ];
 
 const indianCities = [

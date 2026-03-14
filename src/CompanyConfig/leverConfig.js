@@ -102,6 +102,13 @@ const companySiteNames = [
   'outreach',
   'cred',
   'sophos',
+
+  // ── Discovered via ATS scan (Mar 2026) ──
+  'porter',
+  'hevo',
+  'epifi',
+  'freshworks',
+  'pocketfm',
   
 
 ];

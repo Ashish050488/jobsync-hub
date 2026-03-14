@@ -48,6 +48,30 @@ const companySlugs = [
   'infystrat',                // InfyStrat
   'mira-construction-l-dot-l-c-1', // MIRA CONSTRUCTION L.L.C
   'visit',                    // Visit.org,
+
+  // ── Discovered via ATS scan (Mar 2026) ──
+  'razorpay',
+  'cred',
+  'meesho',
+  'groww',
+  'phonepe',
+  'swiggy',
+  'zomato',
+  'flipkart',
+  'paytm',
+  'ola',
+  'olacabs',
+  'byjus',
+  'oyo',
+  'oyorooms',
+  'dream11',
+  'delhivery',
+  'nykaa',
+  'udaan',
+  'bharatpe',
+  'slice',
+  'curefit',
+  'cultfit',
 ];
 
 const indianCities = [

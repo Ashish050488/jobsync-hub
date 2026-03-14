@@ -101,6 +101,10 @@ export const greenhouseConfig = {
         'duolingo',
         'labelbox',
         'naukri',
+
+        // ── Discovered via ATS scan (Mar 2026) ──
+        'tcs',
+        'slice',
     ],
     
     // Internal state

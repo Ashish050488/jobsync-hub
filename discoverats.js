@@ -1,752 +1,571 @@
 #!/usr/bin/env node
 
 /**
- * ATS Discovery Tool — Greenhouse, Ashby, Lever
- * Tests 1500+ company slugs against all 3 free public APIs.
- * Usage: node src/discoverats.js
+ * Indian Company ATS Discovery — Greenhouse, Ashby, Lever, Recruitee, Workable
+ * Prints EVERY found board so you know which company is on which platform.
+ * Usage: node discoverIndia.js
  */
 
 const CONCURRENCY = 8;
-const BATCH_DELAY_MS = 2000;
+const BATCH_DELAY_MS = 1500;
 const TIMEOUT_MS = 10000;
 
+// ─────────────────────────────────────────────────────────────────────────────
+// ~1000+ INDIAN COMPANY SLUGS
+// ─────────────────────────────────────────────────────────────────────────────
 const companySlugs = [
-  // ═══════════════════════════════════════════════════════════════
-  // INDIAN UNICORNS & DECACORNS (70+)
-  // ═══════════════════════════════════════════════════════════════
-  'razorpay','razorpay-software','razorpaysoftware',
+
+  // ── UNICORNS / DECACORNS ──────────────────────────────────────────────────
+  'razorpay','razorpaysoftware','razorpay-software',
   'cred','cred-club','credclub',
   'meesho','meesho-tech','meeshotech',
-  'groww','groww-in','growwin',
+  'groww','groww-in',
   'zerodha','zerodha-tech',
   'phonepe','phonepe-tech','phonepetech',
-  'swiggy','swiggy-tech','swiggytech',
-  'zomato','zomato-tech','zomatotech',
-  'flipkart','flipkart-tech','flipkarttech',
-  'paytm','paytm-tech','one97','paytmtech',
-  'ola','ola-cabs','olacabs','ola-electric','olaelectric',
-  'byjus','byjus-tech','think-and-learn','thinkandlearn',
-  'oyo','oyo-rooms','oyorooms','oyo-tech',
-  'dream11','dream-sports','dreamsports',
-  'delhivery','delhivery-tech','delhiverytech',
-  'nykaa','nykaa-tech','fsn-ecommerce','nykaatech',
-  'udaan','udaan-tech','udaantech',
-  'bharatpe','bharatpe-tech','bharatpetech',
-  'slice','slice-tech','slice-fintech','slicefintech',
-  'jupiter','jupiter-money','jupitermoney',
-  'fi','fi-money','epifi','fimoney',
-  'curefit','cure-fit','cultfit','cult-fit',
-  'lenskart','lenskart-tech','lenskarttech',
-  'boat','boatlifestyle','boat-lifestyle','imagine-marketing',
-  'urban-company','urbancompany','urbanclap','urban-clap',
-  'unacademy','unacademy-tech','unacademytech',
-  'vedantu','vedantu-tech','vedantutech',
-  'physicswallah','physics-wallah','pw','pw-tech',
-  'upgrad','upgrad-tech','upgradtech',
-  'zepto','zepto-tech','zeptotech',
-  'blinkit','blinkit-tech','blinkitech',
-  'dunzo','dunzo-tech','dunzotech',
-  'rapido','rapido-bike','rapidobike',
-  'myntra','myntra-tech','myntratech',
-  'makemytrip','make-my-trip','mmt',
-  'ixigo','ixigo-tech',
-  'cleartrip','cleartrip-tech',
-  'cars24','cars-24',
-  'spinny','spinny-tech',
-  'acko','acko-tech','acko-insurance',
-  'nobroker','nobroker-tech',
-  'housing','housing-com','housingcom',
-  'magicbricks','magic-bricks',
-  'practo','practo-tech',
-  'pharmeasy','pharm-easy','pharmeasytech',
-  '1mg','tata-1mg','tata1mg',
-  'apna','apna-tech','apnatech',
-  'sharechat','share-chat','verse-innovation','verseinnovation',
-  'dailyhunt','daily-hunt',
-  'licious','licious-tech',
+  'swiggy','swiggy-tech',
+  'zomato','zomato-tech',
+  'flipkart','flipkart-tech',
+  'paytm','one97','paytm-tech',
+  'ola','olacabs','ola-electric','olaelectric',
+  'byjus','thinkandlearn','think-and-learn',
+  'oyo','oyorooms','oyo-tech',
+  'dream11','dreamsports','dream-sports',
+  'delhivery','delhivery-tech',
+  'nykaa','nykaatech','fsn-ecommerce',
+  'udaan','udaantech',
+  'bharatpe','bharatpetech',
+  'slice','slicefintech','slice-fintech',
+  'jupiter-money','jupitermoney',
+  'epifi','fi-money',
+  'curefit','cultfit','cure-fit',
+  'lenskart','lenskarttech',
+  'boat-lifestyle','imagine-marketing',
+  'urbancompany','urbanclap','urban-clap',
+  'unacademy','unacademytech',
+  'vedantu','vedantutech',
+  'physicswallah','pw','pw-tech',
+  'upgrad','upgradtech',
+  'zepto','zeptotech',
+  'blinkit','blinkitech',
+  'dunzo','dunzotech',
+  'rapido','rapidobike','rapido-bike',
+  'myntra','myntratech',
+  'makemytrip','mmt','make-my-trip',
+  'ixigo',
+  'cleartrip',
+  'cars24',
+  'spinny',
+  'acko','acko-insurance',
+  'nobroker',
+  'housing','housingcom',
+  'magicbricks',
+  'practo',
+  'pharmeasy',
+  'tata-1mg','tata1mg',
+  'apna','apnatech',
+  'sharechat','verseinnovation',
+  'dailyhunt',
+  'licious',
   'bigbasket','big-basket',
-  'country-delight','countrydelight',
-  'ninjacart','ninja-cart',
-  'dealshare','deal-share',
-  'khatabook','khata-book',
-  'mobikwik','mobi-kwik',
-  'policybazaar','policy-bazaar','pb-fintech','pbfintech',
-  'pepperfry','pepper-fry',
-  'snapdeal','snap-deal',
-  'firstcry','first-cry',
-  'mamaearth','mama-earth','honasa',
-  'bewakoof','bewakoof-brands',
-  'wakefit','wake-fit',
-  'purplle','purplle-tech',
-  'mpl','mobile-premier-league',
+  'countrydelight',
+  'ninjacart',
+  'dealshare',
+  'khatabook',
+  'mobikwik',
+  'policybazaar','pbfintech',
+  'pepperfry',
+  'snapdeal',
+  'firstcry',
+  'honasa','mamaearth',
+  'bewakoof',
+  'wakefit',
+  'purplle',
+  'mpl',
   'winzo','winzo-games',
 
-  // ═══════════════════════════════════════════════════════════════
-  // INDIAN SAAS / TECH PRODUCT (150+)
-  // ═══════════════════════════════════════════════════════════════
+  // ── SAAS / TECH PRODUCT ───────────────────────────────────────────────────
   'freshworks','freshworks-inc','freshdesk','freshsales','freshservice',
-  'zoho','zoho-corp','zoho-corporation','zohocorp',
-  'chargebee','chargebee-inc','chargebeetech',
-  'postman','postman-tech','postmantech',
-  'hasura','hasura-tech','hasuratech',
-  'browserstack','browser-stack','browserstacktech',
-  'lambdatest','lambda-test',
-  'clevertap','clever-tap','clevertaptech',
-  'moengage','mo-engage','moengagetech',
-  'webengage','web-engage',
-  'leadsquared','lead-squared','leadsquaredtech',
-  'darwinbox','darwin-box','darwinboxtech',
-  'keka','keka-hr','kekahr',
-  'greythr','grey-thr','greytip','greythrtech',
-  'haptik','haptik-tech','haptiktech',
-  'yellowai','yellow-ai','yellow-messenger','yellowmessenger',
-  'gupshup','gup-shup','gupshuptech',
-  'verloop','verloop-io','verlooptech',
-  'whatfix','what-fix','whatfixtech',
-  'mindtickle','mind-tickle','mindtickletech',
-  'icertis','icertis-tech','icertistech',
-  'druva','druva-tech','druvatech',
-  'netcore','netcore-cloud','netcorecloud',
-  'exotel','exotel-tech','exoteltech',
-  'sprinklr','sprinklr-tech','sprinklrtech',
-  'capillary','capillary-technologies','capillarytech',
-  'kissflow','kiss-flow','kissflowtech',
-  'rocketlane','rocket-lane','rocketlanetech',
-  'hevodata','hevo-data','hevo',
-  'sigmoid','sigmoid-analytics','sigmoidanalytics',
+  'zoho','zohocorp','zoho-corp',
+  'chargebee','chargebee-inc',
+  'postman','postmantech',
+  'hasura','hasuratech',
+  'browserstack','browserstacktech',
+  'lambdatest',
+  'clevertap','clevertaptech',
+  'moengage','moengagetech',
+  'webengage',
+  'leadsquared',
+  'darwinbox','darwinboxtech',
+  'keka','kekahr',
+  'greythr','greytip',
+  'haptik','haptiktech',
+  'yellowai','yellow-messenger','yellowmessenger',
+  'gupshup',
+  'verloop',
+  'whatfix',
+  'mindtickle','mindtickletech',
+  'icertis',
+  'druva','druvatech',
+  'netcore-cloud','netcorecloud',
+  'exotel',
+  'sprinklr',
+  'capillary','capillarytech',
+  'kissflow',
+  'rocketlane',
+  'hevodata','hevo','hevo-data',
+  'sigmoid','sigmoidanalytics',
   'tredence','tredence-analytics',
-  'fractal','fractal-analytics','fractal-ai','fractalanalytics',
+  'fractal','fractalanalytics','fractal-ai',
   'musigma','mu-sigma',
-  'latentview','latent-view','latent-view-analytics',
+  'latentview','latent-view-analytics',
   'tigeranalytics','tiger-analytics',
-  'inmobi','in-mobi','inmobitech',
+  'inmobi','inmobitech',
   'medianet','media-net',
-  'glance','glance-tech','glance-inmobi',
-  'smallcase','small-case','smallcasetech',
-  'kuvera','kuvera-tech',
-  'upstox','upstox-tech','upstoxtech',
-  'angelone','angel-one','angel-broking',
-  'juspay','juspay-tech','juspaytech',
-  'setu','setu-tech','setutech',
-  'decentro','decentro-tech',
-  'cashfree','cashfree-payments','cashfreepayments',
-  'instamojo','insta-mojo',
-  'signzy','signzy-tech',
-  'perfios','perfios-tech',
-  'hyperverge','hyper-verge',
-  'simpl','simpl-tech','getsimpl',
-  'niyo','niyo-solutions','goniyo',
-  'zeta','zeta-tech','zetasuit',
-  'recko','recko-tech',
-  'fyle','fyle-tech','fylehq',
-  'servify','servify-tech',
-  'classplus','class-plus',
-  'teachmint','teach-mint',
-  'doubtnut','doubt-nut',
-  'toppr','toppr-tech',
-  'embibe','embibe-tech',
-  'testbook','test-book',
-  'scaler','scaler-academy','scaleracademy','interviewbit','interview-bit',
-  'codingninjas','coding-ninjas',
-  'masai','masai-school','masaischool',
+  'glance','glance-inmobi',
+  'smallcase',
+  'kuvera',
+  'upstox','upstoxtech',
+  'angelone','angel-broking',
+  'juspay','juspaytech',
+  'setu',
+  'decentro',
+  'cashfree','cashfreepayments',
+  'instamojo',
+  'signzy',
+  'perfios',
+  'hyperverge',
+  'getsimpl',
+  'goniyo','niyo',
+  'zeta','zetasuit',
+  'recko',
+  'fyle','fylehq',
+  'servify',
+  'classplus',
+  'teachmint',
+  'doubtnut',
+  'toppr',
+  'embibe',
+  'testbook',
+  'scaler','scaleracademy','interviewbit',
+  'codingninjas',
+  'masai-school','masaischool',
   'newton-school','newtonschool',
-  'pesto','pesto-tech','pestotech',
-  'almabetter','alma-better',
-  'crio','crio-do','criodo',
-  'nxtwave','nxt-wave',
-  'unstop','unstop-tech','dare2compete',
-  'devfolio','dev-folio',
-  'workindia','work-india',
-  'apnaklub','apna-klub',
-  'revature','revature-india',
-  'commvault','commvault-india',
-  'nutanix','nutanix-india',
-  'cohesity','cohesity-india',
-  'rubrik','rubrik-india',
-  'paloaltonetworks','palo-alto-networks',
-  'crowdstrike','crowd-strike',
-  'zscaler','z-scaler',
-  'okta','okta-india',
-  'sailpoint','sail-point',
-  'cyberark','cyber-ark',
-  'forcepoint','force-point',
-  'sophos','sophos-india',
-  'trellix','trellix-india',
+  'pesto','pestotech',
+  'almabetter',
+  'crio-do','criodo',
+  'nxtwave',
+  'unstop','dare2compete',
+  'devfolio',
+  'workindia',
+  'apnaklub',
+  'peoplestrong','people-strong',
+  'sumhr',
+  'kredily',
+  'zimyo',
+  'qandle',
+  'akrivia',
 
-  // ═══════════════════════════════════════════════════════════════
-  // INDIAN IT SERVICES / CONSULTING MID-CAP (100+)
-  // ═══════════════════════════════════════════════════════════════
-  'thoughtworks','thought-works','thoughtworks-india',
-  'hashedin','hashedin-tech','hashedintech',
-  'nagarro','nagarro-tech','nagarrotech',
-  'epam','epam-india','epam-systems',
-  'publicissapient','publicis-sapient','sapient',
-  'xoriant','xoriant-tech',
-  'talentica','talentica-software',
-  'mphasis','mphasis-tech',
+  // ── IT SERVICES / CONSULTING ──────────────────────────────────────────────
+  'nagarro','nagarrotech',
+  'xoriant',
+  'talentica',
+  'mphasis',
   'ltimindtree','lti-mindtree','lti','mindtree',
-  'coforge','coforge-tech',
-  'zensar','zensar-tech','zensartech',
-  'persistent','persistent-systems','persistentsystems',
-  'birlasoft','birla-soft',
-  'sonata-software','sonatasoftware',
-  'cyient','cyient-tech','cyienttech',
-  'happiest-minds','happiestminds',
-  'mastek','mastek-tech',
-  'newgen','newgen-software','newgensoftware',
-  'cigniti','cigniti-tech',
-  'indium','indium-software','indiumsoftware',
-  'kellton','kellton-tech',
-  'datamatics','datamatics-tech',
-  'techwave','tech-wave',
-  'prodapt','prodapt-solutions',
-  'subex','subex-tech',
-  'sasken','sasken-tech',
-  'mobileware','mobile-ware',
-  'valuelab','value-lab',
-  'aurigo','aurigo-software',
-  'saksoft','sak-soft',
-  'intellect-design','intellectdesign',
-  'nucleus-software','nucleussoftware',
-  'ramco','ramco-systems',
-  'qualitest','quali-test',
-  'globallogic','global-logic',
-  'amdocs','amdocs-india',
-  'synopsys','synopsys-india',
-  'cadence','cadence-design',
-  'altran','altran-india',
-  'capgemini','capgemini-india',
-  'accenture','accenture-india',
-  'cognizant','cognizant-india',
-  'infosys','infosys-tech',
-  'wipro','wipro-tech',
-  'tcs','tata-consultancy',
-  'hcl','hcltech','hcl-technologies',
-  'techm','tech-mahindra','techmahindra',
+  'coforge',
+  'zensar','zensartech',
+  'persistent-systems','persistentsystems',
+  'birlasoft',
+  'sonatasoftware','sonata-software',
+  'cyient',
+  'happiestminds','happiest-minds',
+  'mastek',
+  'newgen-software','newgensoftware',
+  'cigniti',
+  'indiumsoftware','indium-software',
+  'kellton',
+  'datamatics',
+  'prodapt',
+  'subex',
+  'sasken',
+  'intellectdesign','intellect-design',
+  'nucleussoftware','nucleus-software',
+  'ramco-systems','ramco',
+  'globallogic',
+  'amdocs',
+  'hexaware','hexawaretech',
+  'kpit','kpit-tech',
+  'firstsource',
+  'wns','wns-global',
+  'ltts','lt-technology-services',
+  'tata-elxsi','tataelxsi',
+  'tata-technologies','tatatechnologies',
+  'hashedin','hashedintech',
+  'radixweb',
+  'simform',
+  'einfochips',
+  'crestdata','crest-data',
+  'tatvasoft',
+  'azilen',
+  'rapidops',
+  'argusoft',
+  'appinventiv',
+  'hyperlink-infosystem',
+  'konstant',
+  'mindinventory',
+  'openxcell',
+  'bacancy',
+  'marutitechlabs',
+  'cuelogic',
+  'velotio',
+  'synerzip',
+  'harbinger-group',
+  'quantiphi',
+  'gramener',
+  'dataweave',
+  'crayondata',
+  'flutura',
+  'bridgei2i',
+  'manthan',
+  'algonomy',
+  'absolutdata',
+  'talentneuron',
+  'epam','epam-india',
+  'publicis-sapient','publicissapient',
+  'thoughtworks-india',
 
-  // ═══════════════════════════════════════════════════════════════
-  // FINTECH / PAYMENTS / BANKING TECH (80+)
-  // ═══════════════════════════════════════════════════════════════
-  'payu','pay-u','payu-india',
+  // ── FINTECH / PAYMENTS ────────────────────────────────────────────────────
+  'payu','payu-india',
   'pinelabs','pine-labs',
-  'innoviti','innoviti-payment',
-  'fiserv','fiserv-india',
-  'finastra','finastra-india',
-  'temenos','temenos-india',
-  'edgeverve','edge-verve',
-  'rupeek','rupeek-fintech',
-  'lendingkart','lending-kart',
-  'navi','navi-tech','navi-finserv',
-  'moneycontrol','money-control',
-  'tickertape','ticker-tape',
-  'paytmmoney','paytm-money',
-  'mswipe','m-swipe',
-  'ezetap','eze-tap',
-  'worldline','worldline-india',
-  'razorpayx','razorpay-x',
-  'open-financial','open-money','bankopen',
-  'indifi','indifi-tech',
-  'tartanhq','tartan-hq','tartan',
-  'revfin','rev-fin',
+  'innoviti',
+  'rupeek',
+  'lendingkart',
+  'navi-tech','navi-finserv',
+  'mswipe',
+  'ezetap',
+  'worldline-india',
+  'bankopen','open-financial',
+  'indifi',
+  'tartanhq',
   'credavenue','cred-avenue',
-  'northernarc','northern-arc',
-  'vivriti','vivriti-capital',
-  'finbox','fin-box',
-  'yubi','yubi-tech',
-  'zaggle','zaggle-tech',
-  'moneytap','money-tap',
-  'jupiter-tech','jupitertech',
-  'stashfin','stash-fin',
-  'kreditbee','kredit-bee',
-  'moneyview','money-view',
-  'truebalance','true-balance',
-  'zestmoney','zest-money',
-  'kissht','kiss-ht',
-  'earlysalary','early-salary',
-  'flexmoney','flex-money',
-  'lazypay','lazy-pay',
-  'simpl-pay','simplpay',
-  'slice-pay','slicepay',
-  'uni-cards','unicards',
+  'northernarc',
+  'vivriti',
+  'finbox',
+  'yubi',
+  'zaggle',
+  'moneytap',
+  'stashfin',
+  'kreditbee',
+  'moneyview',
+  'truebalance',
+  'zestmoney',
+  'kissht',
+  'earlysalary','fibe',
   'onecard','one-card',
-  'cred-pay','credpay',
-  'freecharge','free-charge',
-  'amazonpay','amazon-pay',
-  'googlepay','google-pay',
-  'airtel-payments','airtelpayments',
-  'jio-payments','jiopayments',
+  'unicards','uni-cards',
+  'freecharge',
+  'moneyfwd',
+  'bharatx',
+  'refyne',
+  'ftcash',
+  'freo',
+  'avail-finance',
+  'benow',
+  'ditto-insurance',
+  'plum-hq',
+  'nova-benefits',
+  'digit-insurance','go-digit',
+  'policyx',
+  'renewbuy',
+  'paytmmoney',
 
-  // ═══════════════════════════════════════════════════════════════
-  // HEALTHTECH / BIOTECH (50+)
-  // ═══════════════════════════════════════════════════════════════
-  'mfine','m-fine',
-  'pristyncare','pristyn-care',
-  'healthifyme','healthify-me',
-  'dozee','dozee-tech',
-  'niramai','niramai-tech',
-  'qureai','qure-ai',
-  'sigtuple','sig-tuple',
-  'tricog','tricog-health',
-  'innovaccer','innovaccer-health',
-  'ekincare','eki-care',
-  'netmeds','net-meds',
-  'medlife','med-life',
-  'apollo247','apollo-247',
+  // ── HEALTHTECH ────────────────────────────────────────────────────────────
+  'mfine',
+  'pristyncare',
+  'healthifyme',
+  'niramai',
+  'qureai',
+  'sigtuple',
+  'tricog',
+  'innovaccer',
+  'ekincare',
+  'netmeds',
+  'apollo247',
+  'amaha',
+  'wysa',
+  'healthians',
+  'thyrocare',
+  'docplexus',
+  'mojocare',
+  'curelink',
+  'zyla',
+  'predible',
+  'portea','portea-medical',
   'tatahealth','tata-health',
-  'amaha','amaha-health',
-  'wysa','wysa-health',
-  'breathe-well','breathewell',
-  'healthians','healthians-tech',
-  'thyrocare','thyro-care',
-  'docplexus','doc-plexus',
-  'curelink','cure-link',
-  'mojocare','mojo-care',
-  'zyla','zyla-health',
-  'meddo','meddo-health',
-  'navia','navia-life',
-  'predible','predible-health',
-  'siemens-healthineers','siemenshealthineers',
-  'ge-healthcare','gehealthcare',
-  'philips-healthcare','philipshealthcare',
-  'baxter','baxter-india',
+  'bajaj-health',
+  'care-health',
+  'eka-care',
+  'meddco',
+  'clinikk',
 
-  // ═══════════════════════════════════════════════════════════════
-  // D2C / ECOMMERCE / RETAIL (80+)
-  // ═══════════════════════════════════════════════════════════════
-  'ajio','ajio-tech',
-  'tata-cliq','tatacliq',
-  'urbanladder','urban-ladder',
-  'fabindia','fab-india',
-  'zivame','zivame-tech',
-  'sugarcosmetics','sugar-cosmetics',
-  'plum','plum-goodness',
+  // ── D2C / ECOMMERCE ───────────────────────────────────────────────────────
+  'ajio',
+  'tatacliq','tata-cliq',
+  'urbanladder',
+  'sugarcosmetics',
+  'plum-goodness',
+  'noise-tech','gonoise',
+  'bluestone',
+  'caratlane',
+  'melorra',
+  'yatra',
+  'goibibo',
+  'treebo',
+  'fabhotels',
+  'zostel',
+  'clovia',
+  'wowskinscience',
+  'portronics',
+  'zebronics',
   'boult','boult-audio',
-  'noise','noise-tech','gonoise',
-  'fireboltt','fire-boltt',
-  'bluestone','blue-stone',
-  'caratlane','carat-lane',
-  'melorra','melorra-tech',
-  'yatra','yatra-online',
-  'goibibo','goibibo-tech',
-  'treebo','treebo-hotels',
-  'fabhotels','fab-hotels',
-  'zostel','zostel-tech',
-  'meesho-supply','meesho-marketplace',
-  'nykaa-fashion','nykaafashion',
-  'titan','titan-company',
-  'tanishq','tanishq-tech',
-  'clovia','clovia-tech',
-  'wow-skin','wowskinscience',
-  'portronics','portronics-tech',
-  'ptron','ptron-tech',
-  'zebronics','zebronics-tech',
-  'realme','realme-india',
-  'xiaomi','xiaomi-india','mi-india',
-  'oneplus','oneplus-india',
-  'oppo','oppo-india',
-  'vivo','vivo-india',
-  'samsung-india','samsungindia',
-  'tata-digital','tatadigital',
-  'jiomart','jio-mart',
-  'reliance-retail','relianceretail',
-  'dmartready','dmart-ready',
-  'grofers','grofers-tech',
-  'milkbasket','milk-basket',
-  'supr-daily','suprdaily',
-  'bb-now','bbnow','bbdaily',
-  'swiggy-instamart','swiggyinstamart',
-  'zomato-hyperpure','zomatohyperpure',
-  'udaan-business','udaanbusiness',
-  'jumbotail','jumbo-tail',
-  'shopkirana','shop-kirana',
+  'jiomart',
+  'reliance-retail',
+  'milkbasket',
+  'suprdaily',
+  'jumbotail',
+  'shopkirana',
+  'fashinza',
+  'bikayi',
+  'dukaan',
+  'vinculum',
+  'unicommerce',
+  'zivame',
+  'fabindia',
+  'fireboltt',
+  'titan-company',
+  'firstcry-tech',
 
-  // ═══════════════════════════════════════════════════════════════
-  // LOGISTICS / SUPPLY CHAIN / MOBILITY (60+)
-  // ═══════════════════════════════════════════════════════════════
-  'shiprocket','ship-rocket',
+  // ── LOGISTICS / MOBILITY ──────────────────────────────────────────────────
+  'shiprocket',
   'ecomexpress','ecom-express',
-  'shadowfax','shadow-fax',
-  'loadshare','load-share',
-  'rivigo','rivigo-tech',
-  'blackbuck','black-buck',
-  'porter','porter-tech',
-  'vahak','vahak-tech',
-  'cogoport','cogo-port',
-  'locus','locus-sh',
-  'fareye','far-eye',
-  'loginext','log-i-next',
-  'shipsy','shipsy-tech',
-  'pickrr','pickrr-tech',
-  'elasticrun','elastic-run',
-  'magicpin','magic-pin',
-  'parkplus','park-plus',
-  'blowhorn','blow-horn',
-  'freightwalla','freight-walla',
-  'freightfox','freight-fox',
-  'flyingbeast','flying-beast',
-  'grab-india','grabindia',
-  'uber-india','uberindia',
-  'bounce','bounce-tech',
-  'vogo','vogo-tech',
-  'yulu','yulu-bikes',
-  'drivezy','drivezy-tech',
-  'zoomcar','zoom-car',
-  'myles','myles-cars',
-  'revv','revv-cars',
-  'savaari','savaari-tech',
-  'shuttl','shuttl-tech',
-  'chalo','chalo-tech',
-  'cityflo','city-flo',
-  'nammayatri','namma-yatri',
+  'shadowfax',
+  'loadshare',
+  'rivigo',
+  'blackbuck',
+  'porter',
+  'vahak',
+  'cogoport',
+  'locus',
+  'fareye',
+  'loginext',
+  'shipsy',
+  'pickrr',
+  'elasticrun',
+  'magicpin',
+  'parkplus',
+  'blowhorn',
+  'freightwalla',
+  'nammayatri',
+  'yulu',
+  'drivezy',
+  'zoomcar',
+  'bounce',
+  'chalo',
+  'cityflo',
+  'shuttl',
+  'nuego',
+  'ati-motors',
+  'euler-motors',
+  'battery-smart',
+  'altigreen',
 
-  // ═══════════════════════════════════════════════════════════════
-  // ENTERPRISE B2B SAAS (80+)
-  // ═══════════════════════════════════════════════════════════════
-  'zenoti','zenoti-tech',
-  'o9solutions','o9-solutions',
-  'amagi','amagi-media',
-  'uniphore','uni-phore',
-  'observeai','observe-ai',
-  'karza','karza-tech',
-  'axtria','axtria-tech',
-  'mantra-labs','mantralabs',
-  'highradius','high-radius',
-  'thoughtspot','thoughtspot-india',
-  'wingify','wingify-tech','vwo',
-  'hackerrank','hacker-rank',
-  'hackerearth','hacker-earth',
-  'directi','direct-i',
-  'radixweb','radix-web',
-  'simform','sim-form',
-  'einfochips','einfo-chips',
-  'crest-data','crestdata',
-  'tatvasoft','tatva-soft',
-  'azilen','azilen-tech',
-  'rapidops','rapid-ops',
-  'argusoft','argu-soft',
-  'tudip','tudip-tech',
-  'inexture','inexture-tech',
-  'softobiz','softo-biz',
-  'appinventiv','app-inventiv',
-  'hyperlink','hyperlink-infosystem',
-  'konstant','konstant-infosolutions',
-  'techugo','tec-hugo',
-  'mindinventory','mind-inventory',
-  'openxcell','open-xcell',
-  'bacancy','bacancy-tech',
-  'maruti-techlabs','marutitechlabs',
-  'cuelogic','cue-logic',
-  'velotio','velotio-tech',
-  'synerzip','synerzip-tech',
-  'clarice','clarice-tech',
-  'harbinger','harbinger-group',
-  'quantiphi','quanti-phi',
-  'aiml','ai-ml',
-  'sigmoid-tech','sigmoidtech',
-  'tredence-tech','tredencetech',
-  'gramener','gramener-tech',
-  'dataweave','data-weave',
-  'crayon-data','crayondata',
-  'flutura','flutura-tech',
-  'bridgei2i','bridge-i2i',
-  'manthan','manthan-tech',
-  'absolutdata','absolut-data',
-  'algonomy','algonomy-tech',
-
-  // ═══════════════════════════════════════════════════════════════
-  // AI / DEEPTECH / SPACETECH (60+)
-  // ═══════════════════════════════════════════════════════════════
-  'sarvam','sarvam-ai','sarvamai',
+  // ── AI / DEEPTECH / SPACETECH ─────────────────────────────────────────────
+  'sarvam','sarvamai','sarvam-ai',
   'krutrim','krutrim-ai',
   'wadhwani-ai','wadhwaniai',
   'agnikul','agnikul-cosmos',
   'skyroot','skyroot-aerospace',
   'pixxel','pixxel-space',
   'bellatrix','bellatrix-aerospace',
-  'dhruvaspace','dhruva-space',
-  'vernacularai','vernacular-ai',
-  'gnaniai','gnani-ai',
-  'aryaai','arya-ai',
-  'fluidai','fluid-ai',
-  'entropik','entropik-tech',
+  'dhruva-space','dhruvaspace',
+  'vernacular-ai','vernacularai',
+  'gnani-ai','gnaniai',
+  'arya-ai','aryaai',
+  'fluid-ai','fluidai',
+  'entropik',
   'e42','e42-ai',
-  'nikiai','niki-ai',
-  'mygate','my-gate',
-  'apartmentadda','apartment-adda',
-  'proptiger','prop-tiger',
-  'quikr','quikr-tech',
-  '99acres','99-acres',
-  'olx','olx-india',
-  'cropin','crop-in',
-  'agrostar','agro-star',
-  'bijak','bijak-tech',
-  'waycool','way-cool',
-  'stellapps','stell-apps',
-  'ather','ather-energy','atherenergy',
-  'revolt','revolt-motors',
-  'ultraviolette','ultra-violette',
-  'tork','tork-motors',
-  'simpleenergy','simple-energy',
+  'niki-ai','nikiai',
+  'mygate',
+  'cropin',
+  'agrostar',
+  'bijak',
+  'waycool',
+  'stellapps',
+  'staqu',
+  'tessact',
+  'detect-technologies',
+  'ignitarium',
+  'mirafra',
+  'tvarit',
+  'altizon',
+  'prescinto',
+  'yotta','yotta-infrastructure',
+
+  // ── EV / CLEAN ENERGY ─────────────────────────────────────────────────────
+  'ather-energy','atherenergy',
+  'revolt-motors',
+  'ultraviolette',
+  'tork-motors',
+  'simpleenergy',
   'log9','log9-materials',
-  'exponentenergy','exponent-energy',
-  'ionenergy','ion-energy',
+  'exponent-energy','exponentenergy',
+  'ion-energy','ionenergy',
   'lohum','lohum-cleantech',
-  'grinntech','grinn-tech',
-  'zunroof','zun-roof',
+  'grinntech',
+  'zunroof',
   'fourth-partner','fourthpartner',
   'hero-electric','heroelectric',
-  'ampere','ampere-vehicles',
+  'ampere-vehicles','ampere',
+  'okinawa-scooters',
+  'batx-energies',
+  'sterling-wilson',
+  'amplus-solar',
+  'ayana-renewable',
+  'greenko',
+  'acme-solar',
 
-  // ═══════════════════════════════════════════════════════════════
-  // GLOBAL TECH — BIG WITH INDIA OFFICES (200+)
-  // ═══════════════════════════════════════════════════════════════
-  'stripe','stripe-tech',
-  'notion','notion-hq','notion-tech',
-  'vercel','vercel-tech',
-  'supabase','supabase-tech',
-  'linear','linear-app',
-  'figma','figma-tech',
-  'canva','canva-tech',
-  'gitlab','git-lab',
-  'datadog','data-dog',
-  'snyk','snyk-tech',
-  'elastic','elastic-tech',
-  'cloudflare','cloud-flare',
-  'hashicorp','hashi-corp',
-  'confluent','confluent-tech',
-  'cockroachlabs','cockroach-labs',
-  'timescale','timescale-db',
-  'airbyte','airbyte-tech',
-  'dbt-labs','dbt',
-  'fivetran','five-tran',
-  'amplitude','amplitude-tech',
-  'mixpanel','mix-panel',
-  'segment','segment-tech','twilio-segment',
-  'contentful','content-ful',
-  'twilio','twilio-tech',
-  'hubspot','hub-spot',
-  'intercom','inter-com',
-  'zendesk','zen-desk',
-  'atlassian','atlassian-tech',
-  'asana','asana-tech',
-  'monday','monday-com',
-  'clickup','click-up',
-  'airtable','air-table',
-  'retool','re-tool',
-  'deel','deel-tech',
-  'remote','remote-com',
-  'rippling','rippling-tech',
-  'personio','personio-tech',
-  'miro','miro-tech',
-  'grammarly','grammarly-tech',
-  'gojek','go-jek',
-  'grab','grab-tech',
-  'shopify','shopify-tech',
-  'wix','wix-tech',
-  'webflow','web-flow',
-  'netlify','netlify-tech',
-  'databricks','data-bricks',
-  'snowflake','snowflake-tech',
-  'mongodb','mongo-db',
-  'redis','redis-labs',
-  'neo4j','neo-4j',
-  'algolia','algolia-tech',
-  'appwrite','app-write',
-  'strapi','strapi-tech',
-  'sanity','sanity-io',
-  'prisma','prisma-tech',
-  'cohere','cohere-tech',
-  'stabilityai','stability-ai',
-  'huggingface','hugging-face',
-  'langchain','lang-chain',
-  'pinecone','pine-cone',
-  'weaviate','weaviate-tech',
-  'airbnb',
-  'pinterest',
-  'reddit',
-  'twitch',
-  'discord',
-  'spotify',
-  'slack',
-  'dropbox',
-  'docusign',
-  'pagerduty',
-  'newrelic','new-relic',
-  'sentry','sentry-io',
-  'launchdarkly','launch-darkly',
-  'planetscale','planet-scale',
-  'neon','neon-tech',
-  'turso','turso-tech',
-  'convex','convex-tech',
-  'clerk','clerk-dev',
-  'resend','resend-tech',
-  'plaid','plaid-tech',
-  'brex','brex-tech',
-  'ramp','ramp-tech',
-  'mercury','mercury-tech',
-  'gusto','gusto-tech',
-  'loom','loom-tech',
-  'pitch','pitch-tech',
-  'jasper','jasper-ai',
-  'writesonic','write-sonic',
-  'copy-ai','copyai',
-
-  // ── More Global Tech with India offices ──
-  'salesforce','salesforce-india',
-  'oracle','oracle-india',
-  'microsoft','microsoft-india',
-  'google','google-india',
-  'amazon','amazon-india',
-  'meta','meta-india','facebook',
-  'apple','apple-india',
-  'adobe','adobe-india',
-  'vmware','vmware-india',
-  'dell','dell-india',
-  'ibm','ibm-india',
-  'sap','sap-india',
-  'servicenow','service-now',
-  'workday','workday-india',
-  'splunk','splunk-india',
-  'dynatrace','dynatrace-india',
-  'appdynamics','app-dynamics',
-  'newrelic','new-relic-india',
-  'pagerduty','pager-duty',
-  'gitlab','gitlab-india',
-  'github','github-india',
-  'jetbrains','jet-brains',
-  'docker','docker-tech',
-  'kubernetes','kubernetes-tech',
-  'redhat','red-hat',
-  'canonical','canonical-ubuntu',
-  'suse','suse-tech',
-  'elastic','elastic-india',
-  'couchbase','couch-base',
-  'yugabyte','yuga-byte',
-  'cockroachdb','cockroach-db',
-  'percona','percona-tech',
-  'mariadb','maria-db',
-  'singlestore','single-store',
-  'starburst','star-burst',
-  'dremio','dremio-tech',
-  'cloudera','cloudera-tech',
-  'teradata','tera-data',
-  'informatica','informatica-india',
-  'talend','talend-tech',
-  'tableau','tableau-tech',
-  'looker','looker-tech',
-  'metabase','meta-base',
-  'hex','hex-tech',
-  'mode','mode-analytics',
-  'observable','observable-tech',
-  'paperspace','paper-space',
-  'lambdalabs','lambda-labs',
-  'replicate','replicate-tech',
-  'modal','modal-tech',
-  'anyscale','any-scale',
-  'wandb','weights-and-biases',
-  'roboflow','robo-flow',
-  'labelbox','label-box',
-  'scaleai','scale-ai',
-  'appen','appen-tech',
-
-  // ── Well-known Greenhouse/Lever/Ashby users ──
-  'benchling','braze','calm','chime',
-  'coinbase','coursera','cruise',
-  'doordash','duolingo','faire','fastly',
-  'flexport','instacart','lyft','marqeta',
-  'nerdwallet','nuro','onemedical','one-medical',
-  'opensea','outreach','palantir','pilot',
-  'quora','relativity','robinhood','scale',
-  'samsara','sofi','square','squarespace',
-  'thumbtack','toast','tripactions','vanta',
-  'verkada','wealthfront',
-  'rivian','lucid','tesla',
-  'nvidia','amd','intel','qualcomm',
-  'broadcom','marvell','micron',
-  'applied-materials','appliedmaterials',
-  'lam-research','lamresearch',
-  'asml','asml-tech',
-  'texas-instruments','texasinstruments',
-  'analog-devices','analogdevices',
-  'maxim','maxim-integrated',
-  'microchip','microchip-tech',
-  'nxp','nxp-semi',
-  'infineon','infineon-tech',
-  'stmicro','stmicroelectronics',
-  'renesas','renesas-tech',
-  'mediatek','media-tek',
-  'arm','arm-tech',
-  'cadence','cadence-design-systems',
-  'synopsys','synopsys-tech',
-  'ansys','ansys-tech',
-  'mathworks','math-works',
-  'autodesk','auto-desk',
-  'ptc','ptc-tech',
-  'siemens-digital','siemensdigital',
-  'dassault','dassault-systemes',
-  'honeywell','honeywell-india',
-  'bosch','bosch-india',
-  'schneider','schneider-electric',
-  'abb','abb-india',
-  'emerson','emerson-india',
-  'rockwell','rockwell-automation',
-  'ge','ge-india',
-  'hitachi','hitachi-india',
-  'mitsubishi','mitsubishi-india',
-  'panasonic','panasonic-india',
-  'sony','sony-india',
-  'lg','lg-india',
-  'philips','philips-india',
-
-  // ═══════════════════════════════════════════════════════════════
-  // EDTECH / GAMING / MEDIA (60+)
-  // ═══════════════════════════════════════════════════════════════
-  'byjus-think','whitehat','whitehat-jr','whitehatjr',
-  'simplilearn','simpli-learn',
+  // ── EDTECH / GAMING / MEDIA ───────────────────────────────────────────────
+  'whitehat','whitehatjr',
+  'simplilearn',
   'greatlearning','great-learning',
-  'eruditus','eruditus-tech',
-  'emeritus','emeritus-tech',
-  'cuemath','cue-math',
-  'extramarks','extra-marks',
-  'gradeup','grade-up',
-  'adda247','adda-247',
+  'eruditus',
+  'emeritus',
+  'cuemath',
+  'extramarks',
+  'adda247',
   'allen-digital','allendigital',
-  'aakash','aakash-digital',
+  'aakash-digital','aakash',
   'leverage-edu','leverageedu',
-  'collegedunia','college-dunia',
-  'shiksha','shiksha-tech',
-  'careers360','careers-360',
-  'naukri','naukri-tech',
+  'collegedunia',
+  'shiksha',
+  'careers360',
   'infoedge','info-edge',
-  'times-internet','timesinternet',
-  'hungama','hungama-digital',
-  'gaana','gaana-tech',
-  'jiosavan','jio-saavn',
-  'wynk','wynk-music',
-  'viacom18','viacom-18',
-  'zee5','zee-5','zee5-tech',
-  'sonyliv','sony-liv',
-  'hotstar','disney-hotstar',
-  'erosnow','eros-now',
-  'mxplayer','mx-player',
-  'games24x7','games-24x7',
-  'dream11-tech','dream11tech',
+  'timesinternet','times-internet',
   'nazara','nazara-tech',
-  'gameskraft','games-kraft',
-  'hike','hike-tech',
-  'koo-app','koo','kooapp',
-  'josh','josh-app',
-  'chingari','chingari-tech',
-  'moj','moj-app',
-  'roposo','roposo-tech',
-  'trell','trell-tech',
-  'pepper-content','peppercontent',
-  'kuku-fm','kukufm',
-  'pratilipi','prati-lipi',
-  'pocket-fm','pocketfm',
-  'stage-app','stageapp',
+  'gameskraft',
+  'games24x7',
+  'kukufm','kuku-fm',
+  'pocketfm','pocket-fm',
+  'pratilipi',
+  'koo','koo-app',
+  'josh-app',
+  'chingari',
+  'roposo',
+  'trell',
+  'peppercontent','pepper-content',
+  'stage-app',
+  'hungama',
+  'gaana',
+  'jiosavan',
+  'wynk',
+  'zee5','zee5-tech',
+  'sonyliv',
+  'mxplayer',
+  'hoichoi',
+  'inshorts',
+  'vidooly',
+  'gradeup',
+
+  // ── LARGE INDIAN CONGLOMERATES / IT ───────────────────────────────────────
+  'tata-communications','tatacomm',
+  'tata-digital','tatadigital',
+  'tatamotors',
+  'mahindra-tech','mtech',
+  'bajaj-finserv','bajajfinserv',
+  'infosys','infosys-tech',
+  'wipro','wipro-tech',
+  'hcl-technologies','hcltech',
+  'tech-mahindra','techmahindra',
+  'tcs','tata-consultancy',
+  'tata-elxsi',
+  'ltts-india',
+  'quick-heal','quickheal',
+  'tally-solutions','tallysolutions',
+  'sap-labs-india','saplabs',
+
+  // ── BANKING / FINANCIAL SERVICES ─────────────────────────────────────────
+  'hdfcbank','hdfc-bank-tech',
+  'icicibank','icici-bank-tech',
+  'axisbank','axis-bank-tech',
+  'kotak-tech','kotak',
+  'idfcfirst','idfc-first',
+  'aubank','au-bank',
+  'rbl-bank',
+  'bajaj-housing',
+  'pnb-housing',
+  'iifl-finance','iifl',
+  'shriram-finance',
+  'muthoot-finance',
+  'ugro-capital',
+  'piramal-finance',
+  'abcl','aditya-birla-finance',
+  'maxlife','max-life',
+  'hdfclife','hdfc-life',
+
+  // ── PROPTECH / REAL ESTATE ────────────────────────────────────────────────
+  'proptiger',
+  '99acres',
+  'quikr',
+  'nestaway',
+  'stanza-living',
+  'colive',
+  'squareyards','square-yards',
+  'anarock',
+  'commonfloor',
+
+  // ── AGRITECH / FOODTECH ───────────────────────────────────────────────────
+  'dehaat',
+  'intello-labs',
+  'samunnati',
+  'freshtohome','fresh-to-home',
+  'rebel-foods','faasos',
+  'dotpe',
+  'eatsure',
+  'wingreens-farms',
+  'the-good-glamm',
+
+  // ── HRTECH / WORKTECH ────────────────────────────────────────────────────
+  'springworks','spring-works',
+  'skuad','skuad-global',
+  'multiplier-hq','multiplier',
+  'razorpayx',
+  'open-payroll',
+  'pocket-hrms',
+  'spine-hr',
+  'hrmantra',
+  'beehive-hrms',
+
+  // ── LEGALTECH / REGTECH ──────────────────────────────────────────────────
+  'leegality',
+  'vakilno1','vakil-no1',
+  'myoperator',
+  'signdesk',
+  'digio',
+
+  // ── TRAVELTECH / HOSPITALITY ─────────────────────────────────────────────
+  'easetotrip',
+  'confirmtkt',
+  'railyatri',
+  'yatra-online',
+  'thomas-cook-india',
+  'treebo-hotels',
+  'fabhotels-tech',
+  'zostel-tech',
+
 ];
 
+// ─────────────────────────────────────────────────────────────────────────────
+// India detection
+// ─────────────────────────────────────────────────────────────────────────────
 const indianCities = [
   'bangalore','bengaluru','mumbai','delhi','new delhi',
   'hyderabad','pune','chennai','noida','gurgaon','gurugram',
@@ -757,7 +576,7 @@ const indianCities = [
   'surat','patna','ranchi','guwahati','bhopal',
 ];
 
-function hasIndiaLocation(text) {
+function hasIndia(text) {
   if (!text) return false;
   const t = text.toLowerCase();
   if (t.includes('india')) return true;
@@ -767,121 +586,233 @@ function hasIndiaLocation(text) {
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 
 async function fetchWithTimeout(url) {
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), TIMEOUT_MS);
+  const ctrl = new AbortController();
+  const tid = setTimeout(() => ctrl.abort(), TIMEOUT_MS);
   try {
-    const res = await fetch(url, { signal: controller.signal, headers: { Accept: 'application/json' } });
-    clearTimeout(timeout);
+    const res = await fetch(url, {
+      signal: ctrl.signal,
+      headers: {
+        Accept: 'application/json',
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
+      },
+    });
+    clearTimeout(tid);
     return res;
-  } catch (err) { clearTimeout(timeout); throw err; }
+  } catch (e) { clearTimeout(tid); throw e; }
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Platform testers
+// ─────────────────────────────────────────────────────────────────────────────
 async function testGreenhouse(slug) {
   try {
-    const res = await fetchWithTimeout(`https://boards-api.greenhouse.io/v1/boards/${slug}/jobs?content=true`);
+    const res = await fetchWithTimeout(
+      `https://boards-api.greenhouse.io/v1/boards/${slug}/jobs?content=true`
+    );
     if (!res.ok) return null;
     const data = await res.json();
     const jobs = data.jobs || [];
-    const india = jobs.filter(j => hasIndiaLocation(j.location?.name)).length;
+    const india = jobs.filter(j => hasIndia(j.location?.name)).length;
     return { slug, platform: 'greenhouse', total: jobs.length, india };
   } catch { return null; }
 }
 
 async function testAshby(slug) {
   try {
-    const res = await fetchWithTimeout(`https://api.ashbyhq.com/posting-api/job-board/${slug}`);
+    const res = await fetchWithTimeout(
+      `https://api.ashbyhq.com/posting-api/job-board/${slug}`
+    );
     if (!res.ok) return null;
     const data = await res.json();
     const jobs = data.jobs || [];
-    const india = jobs.filter(j => hasIndiaLocation(j.location)).length;
+    const india = jobs.filter(j => {
+      if (hasIndia(j.location)) return true;
+      const c = j.address?.postalAddress?.addressCountry || '';
+      if (c === 'IN' || c === 'IND' || hasIndia(c)) return true;
+      return (j.secondaryLocations || []).some(sl =>
+        hasIndia(sl.location) || sl.address?.addressCountry === 'IN'
+      );
+    }).length;
     return { slug, platform: 'ashby', total: jobs.length, india };
   } catch { return null; }
 }
 
 async function testLever(slug) {
   try {
-    const res = await fetchWithTimeout(`https://api.lever.co/v0/postings/${slug}`);
+    const res = await fetchWithTimeout(
+      `https://api.lever.co/v0/postings/${slug}?mode=json`
+    );
     if (!res.ok) return null;
     const jobs = await res.json();
     if (!Array.isArray(jobs)) return null;
-    const india = jobs.filter(j => hasIndiaLocation(j.categories?.location)).length;
+    const india = jobs.filter(j => {
+      const c = (j.country || '').toLowerCase();
+      if (c === 'in' || c === 'ind' || c === 'india') return true;
+      if (hasIndia(j.categories?.location)) return true;
+      return (j.categories?.allLocations || []).some(l => hasIndia(l));
+    }).length;
     return { slug, platform: 'lever', total: jobs.length, india };
   } catch { return null; }
 }
 
-async function testSlug(slug) {
-  const [gh, ash, lev] = await Promise.all([testGreenhouse(slug), testAshby(slug), testLever(slug)]);
-  return [gh, ash, lev].filter(Boolean);
+async function testRecruitee(slug) {
+  try {
+    const res = await fetchWithTimeout(
+      `https://${slug}.recruitee.com/api/offers/`
+    );
+    if (!res.ok) return null;
+    const data = await res.json();
+    const offers = data.offers || [];
+    const india = offers.filter(o =>
+      (o.locations || []).some(loc =>
+        loc.country_code === 'IN' ||
+        loc.country?.toLowerCase() === 'india' ||
+        hasIndia(loc.country) ||
+        hasIndia(loc.city)
+      )
+    ).length;
+    return { slug, platform: 'recruitee', total: offers.length, india };
+  } catch { return null; }
 }
 
+async function testWorkable(slug) {
+  try {
+    const res = await fetchWithTimeout(
+      `https://apply.workable.com/api/v1/widget/accounts/${slug}`
+    );
+    if (!res.ok) return null;
+    const data = await res.json();
+    const jobs = data.jobs || [];
+    const india = jobs.filter(j => {
+      const c = (j.country || '').toLowerCase();
+      if (c === 'india' || c === 'in') return true;
+      if (hasIndia(j.city)) return true;
+      return (j.locations || []).some(l =>
+        l.country_code === 'IN' || hasIndia(l.country) || hasIndia(l.city)
+      );
+    }).length;
+    return { slug, platform: 'workable', total: jobs.length, india };
+  } catch { return null; }
+}
+
+async function testSlug(slug) {
+  const [gh, ash, lev, rec, wrk] = await Promise.all([
+    testGreenhouse(slug),
+    testAshby(slug),
+    testLever(slug),
+    testRecruitee(slug),
+    testWorkable(slug),
+  ]);
+  return [gh, ash, lev, rec, wrk].filter(Boolean);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Main
+// ─────────────────────────────────────────────────────────────────────────────
 async function main() {
   const uniqueSlugs = [...new Set(companySlugs)];
   const startTime = Date.now();
-  console.log(`\n🔍 Testing ${uniqueSlugs.length} slugs × 3 platforms (${CONCURRENCY} parallel)\n`);
 
-  const greenhouse = { found: [], india: [] };
-  const ashby = { found: [], india: [] };
-  const lever = { found: [], india: [] };
-  const platformMap = { greenhouse, ashby, lever };
+  console.log(`\n🔍 Testing ${uniqueSlugs.length} Indian slugs × 5 platforms (${CONCURRENCY} parallel)\n`);
+
+  const platforms = {
+    greenhouse: { found: [], india: [] },
+    ashby:      { found: [], india: [] },
+    lever:      { found: [], india: [] },
+    recruitee:  { found: [], india: [] },
+    workable:   { found: [], india: [] },
+  };
 
   for (let i = 0; i < uniqueSlugs.length; i += CONCURRENCY) {
     const batch = uniqueSlugs.slice(i, i + CONCURRENCY);
     const batchResults = await Promise.all(batch.map(testSlug));
+
     for (const results of batchResults) {
       for (const r of results) {
-        const p = platformMap[r.platform];
+        const p = platforms[r.platform];
         p.found.push(r);
         if (r.india > 0) {
           p.india.push(r);
-          console.log(`  ✅ [${r.platform.toUpperCase()}] ${r.slug}: ${r.india} India / ${r.total} total`);
+          console.log(`  ✅ [${r.platform.toUpperCase().padEnd(10)}] ${r.slug}: ${r.india} India / ${r.total} total`);
         }
       }
     }
+
     const done = Math.min(i + CONCURRENCY, uniqueSlugs.length);
     const elapsed = ((Date.now() - startTime) / 1000).toFixed(0);
-    const totalIndia = greenhouse.india.length + ashby.india.length + lever.india.length;
-    const totalFound = greenhouse.found.length + ashby.found.length + lever.found.length;
-    process.stdout.write(`\r  [${done}/${uniqueSlugs.length}] ${elapsed}s | found: ${totalFound} | 🇮🇳 india: ${totalIndia}`);
+    const totalIndia = Object.values(platforms).reduce((s, p) => s + p.india.length, 0);
+    const totalFound = Object.values(platforms).reduce((s, p) => s + p.found.length, 0);
+    process.stdout.write(
+      `\r  [${done}/${uniqueSlugs.length}] ${elapsed}s | found: ${totalFound} | 🇮🇳 india: ${totalIndia}   `
+    );
+
     if (i + CONCURRENCY < uniqueSlugs.length) await sleep(BATCH_DELAY_MS);
   }
 
   const totalTime = ((Date.now() - startTime) / 1000).toFixed(1);
+
+  // ── PER-PLATFORM BREAKDOWN ────────────────────────────────────────────────
   console.log(`\n\n${'═'.repeat(70)}`);
-  console.log(`📊 RESULTS (${totalTime}s) — ${uniqueSlugs.length} slugs × 3 platforms`);
+  console.log(`📊 RESULTS (${totalTime}s) — ${uniqueSlugs.length} slugs × 5 platforms`);
   console.log(`${'═'.repeat(70)}`);
 
-  for (const [name, data] of Object.entries(platformMap)) {
-    console.log(`\n  ${name.toUpperCase()}: ${data.found.length} companies, ${data.india.length} with India jobs`);
-    if (data.india.length > 0) {
-      console.log(`  ${'─'.repeat(50)}`);
-      for (const r of data.india.sort((a, b) => b.india - a.india)) {
-        console.log(`    ${r.slug}${' '.repeat(Math.max(1, 30 - r.slug.length))}${r.india} India / ${r.total} total`);
+  for (const [name, data] of Object.entries(platforms)) {
+    console.log(`\n  ${name.toUpperCase()}: ${data.found.length} live boards | ${data.india.length} with India jobs`);
+
+    if (data.found.length > 0) {
+      console.log(`  ${'─'.repeat(60)}`);
+      const sorted = [...data.found].sort((a, b) => {
+        if (b.india !== a.india) return b.india - a.india;
+        return b.total - a.total;
+      });
+      for (const r of sorted) {
+        const flag  = r.india > 0 ? `🇮🇳 ${r.india}` : `   0`;
+        const pad   = ' '.repeat(Math.max(1, 36 - r.slug.length));
+        console.log(`    ${r.slug}${pad}${flag} India / ${r.total} total`);
       }
     }
   }
 
+  // ── COPY-READY: INDIA JOBS ONLY ───────────────────────────────────────────
   console.log(`\n${'═'.repeat(70)}`);
-  console.log(`📋 COPY INTO YOUR CONFIG FILES:`);
+  console.log(`📋 PASTE INTO CONFIG FILES (India jobs only):`);
   console.log(`${'═'.repeat(70)}`);
 
-  if (greenhouse.india.length > 0) {
-    console.log(`\n// greenhouseConfig.js — companyBoardTokens:`);
-    for (const r of greenhouse.india.sort((a, b) => b.india - a.india)) {
-      console.log(`  '${r.slug}',${' '.repeat(Math.max(1, 30 - r.slug.length))}// ${r.india} India jobs`);
+  const configMap = {
+    greenhouse: 'greenhouseConfig.js — companyBoardTokens',
+    ashby:      'ashbyConfig.js    — companyBoardNames',
+    lever:      'leverConfig.js    — companySiteNames',
+    recruitee:  'recruiteeConfig.js — companySlugs',
+    workable:   'workableConfig.js  — companySlugs',
+  };
+
+  for (const [name, data] of Object.entries(platforms)) {
+    if (data.india.length === 0) continue;
+    console.log(`\n// ${configMap[name]}:`);
+    for (const r of [...data.india].sort((a, b) => b.india - a.india)) {
+      const pad = ' '.repeat(Math.max(1, 36 - r.slug.length));
+      console.log(`  '${r.slug}',${pad}// ${r.india} India jobs`);
     }
   }
-  if (ashby.india.length > 0) {
-    console.log(`\n// ashbyConfig.js — companySlugs:`);
-    for (const r of ashby.india.sort((a, b) => b.india - a.india)) {
-      console.log(`  '${r.slug}',${' '.repeat(Math.max(1, 30 - r.slug.length))}// ${r.india} India jobs`);
+
+  // ── ALL FOUND (any platform) ──────────────────────────────────────────────
+  console.log(`\n${'═'.repeat(70)}`);
+  console.log(`📋 ALL FOUND BOARDS (every slug that responded on any platform):`);
+  console.log(`${'═'.repeat(70)}`);
+
+  const allFound = new Map();
+  for (const [name, data] of Object.entries(platforms)) {
+    for (const r of data.found) {
+      if (!allFound.has(r.slug)) allFound.set(r.slug, []);
+      allFound.get(r.slug).push(`${name}(${r.total}jobs,${r.india}IN)`);
     }
   }
-  if (lever.india.length > 0) {
-    console.log(`\n// leverConfig.js — companySlugs:`);
-    for (const r of lever.india.sort((a, b) => b.india - a.india)) {
-      console.log(`  '${r.slug}',${' '.repeat(Math.max(1, 30 - r.slug.length))}// ${r.india} India jobs`);
-    }
+
+  for (const [slug, plats] of [...allFound.entries()].sort((a, b) => a[0].localeCompare(b[0]))) {
+    const pad = ' '.repeat(Math.max(1, 38 - slug.length));
+    console.log(`  ${slug}${pad}${plats.join(' | ')}`);
   }
+
   console.log('');
 }
 

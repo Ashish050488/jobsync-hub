@@ -64,6 +64,14 @@ export const ashbyConfig = {
         'clickup',
         'anyscale',
         'docker',
+
+        // ── Discovered via ATS scan (Mar 2026) ──
+        'bounce',
+        'scaler',
+        'yotta',
+        'pesto',
+        'velotio',
+        'loadshare',
     ],
     
     // Internal state
