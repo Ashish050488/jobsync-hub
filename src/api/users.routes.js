@@ -1,5 +1,7 @@
 import { Router } from 'express';
 import { getAllUsers, getUserBySlug, createUser, touchVisit, getAppliedJobs, getAppliedJobDetails, addAppliedJob, removeAppliedJob, updateSkills, getComeBackTo, upsertComeBackTo, removeComeBackTo, setDailyGoal } from '../models/userModel.js';
+import { connectToDb } from '../Db/databaseManager.js';
+import { ObjectId } from 'mongodb';
 
 const router = Router();
 
@@ -71,7 +73,29 @@ router.get('/:slug/applied/details', async (req, res) => {
 // POST /api/users/:slug/applied/:jobId — add to appliedJobs
 router.post('/:slug/applied/:jobId', async (req, res) => {
     try {
-        const applied = await addAppliedJob(req.params.slug, req.params.jobId);
+        const jobId = req.params.jobId;
+
+        let jobSnapshot = {};
+        try {
+            if (ObjectId.isValid(jobId)) {
+                const db = await connectToDb();
+                const job = await db.collection('jobs').findOne(
+                    { _id: new ObjectId(jobId) },
+                    { projection: { JobTitle: 1, Company: 1, ApplicationURL: 1, DirectApplyURL: 1 } },
+                );
+                if (job) {
+                    jobSnapshot = {
+                        jobTitle: job.JobTitle || null,
+                        company: job.Company || null,
+                        applicationURL: job.DirectApplyURL || job.ApplicationURL || null,
+                    };
+                }
+            }
+        } catch (snapshotErr) {
+            console.warn('[users] Could not fetch job snapshot:', snapshotErr.message);
+        }
+
+        const applied = await addAppliedJob(req.params.slug, jobId, jobSnapshot);
         if (applied === null) return res.status(404).json({ error: 'User not found' });
         res.json(applied);
     } catch (err) {

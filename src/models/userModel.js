@@ -96,14 +96,20 @@ export async function touchVisit(slug) {
 
 /**
  * Normalise a raw appliedJobs array — handles legacy plain-string entries.
- * Returns { jobId, appliedAt } objects.
+ * Returns { jobId, appliedAt, jobTitle, company, applicationURL } objects.
  */
 function normaliseApplied(raw) {
     if (!Array.isArray(raw)) return [];
     return raw.map(entry =>
         typeof entry === 'string'
-            ? { jobId: entry, appliedAt: new Date(0) }
-            : entry
+            ? { jobId: entry, appliedAt: new Date(0), jobTitle: null, company: null, applicationURL: null }
+            : {
+                jobId: entry.jobId,
+                appliedAt: entry.appliedAt || new Date(0),
+                jobTitle: entry.jobTitle || null,
+                company: entry.company || null,
+                applicationURL: entry.applicationURL || null,
+            }
     );
 }
 
@@ -144,12 +150,12 @@ export async function getAppliedJobDetails(slug) {
     const jobMap = new Map(jobs.map(job => [String(job._id), job]));
 
     return appliedJobs.map(entry => {
-        const job = jobMap.get(entry.jobId);
+        const liveJob = jobMap.get(entry.jobId);
         return {
             jobId: entry.jobId,
-            jobTitle: job?.JobTitle || 'Job no longer available',
-            company: job?.Company || 'Unknown company',
-            applicationURL: job?.DirectApplyURL || job?.ApplicationURL || null,
+            jobTitle: liveJob?.JobTitle || entry.jobTitle || 'Job no longer available',
+            company: liveJob?.Company || entry.company || 'Unknown company',
+            applicationURL: liveJob?.DirectApplyURL || liveJob?.ApplicationURL || entry.applicationURL || null,
             appliedAt: entry.appliedAt,
         };
     });
@@ -159,7 +165,7 @@ export async function getAppliedJobDetails(slug) {
  * Add a jobId to appliedJobs.
  * Increments appliedCount only when this jobId is newly added.
  */
-export async function addAppliedJob(slug, jobId) {
+export async function addAppliedJob(slug, jobId, jobSnapshot = {}) {
     const col = await usersCol();
     // Remove legacy string form first
     await col.updateOne(
@@ -167,11 +173,19 @@ export async function addAppliedJob(slug, jobId) {
         { $pull: { appliedJobs: jobId } },  // removes legacy string form
     );
 
+    const entry = {
+        jobId,
+        appliedAt: new Date(),
+        jobTitle: jobSnapshot.jobTitle || null,
+        company: jobSnapshot.company || null,
+        applicationURL: jobSnapshot.applicationURL || null,
+    };
+
     // Add only if not already present, and bump persistent counter once
     const result = await col.findOneAndUpdate(
         { slug, 'appliedJobs.jobId': { $ne: jobId } },
         {
-            $push: { appliedJobs: { jobId, appliedAt: new Date() } },
+            $push: { appliedJobs: entry },
             $inc: { appliedCount: 1 },
         },
         { returnDocument: 'after' },
