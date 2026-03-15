@@ -3,32 +3,28 @@ import { JSDOM } from 'jsdom';
 import { AbortController } from 'abort-controller';
 
 import { createJobModel } from '../models/jobModel.js';
-import { BANNED_ROLES, SENIOR_REJECT_KEYWORDS, TECH_ROLE_KEYWORDS } from '../utils.js';
+import { BANNED_ROLES, TECH_ROLE_KEYWORDS } from '../utils.js';
 
 function isSpamOrIrrelevant(title) {
     const lowerTitle = title.toLowerCase();
     return BANNED_ROLES.some(role => lowerTitle.includes(role));
 }
 
-// ─── Entry-level gate: reject senior titles and require a tech-role keyword
-function isEntryLevel(title) {
+// ─── Tech-role gate: accept all tech jobs regardless of seniority
+function isTechRole(title) {
     const t = title.toLowerCase();
-    if (SENIOR_REJECT_KEYWORDS.some(kw => t.includes(kw))) return false;
-    if (!TECH_ROLE_KEYWORDS.some(kw => t.includes(kw))) return false;
-    return true;
+    return TECH_ROLE_KEYWORDS.some(kw => t.includes(kw));
 }
 
-// ─── Infer ExperienceLevel from title ────────────────────────────
+// ─── Infer ExperienceLevel from title (tagging only; no rejection) ─────────
 function inferExperienceLevel(title) {
     const t = title.toLowerCase();
     if (/intern\b/.test(t)) return 'Intern';
-    if (['sde-1', 'sde 1', 'sde-i', 'sde i'].some(k => t.includes(k))) return 'Entry Level';
-    if (['junior', 'jr.', 'jr '].some(k => t.includes(k))) return 'Entry Level';
-    if (t.includes('associate')) return 'Entry Level';
-    if (t.includes('entry level') || t.includes('entry-level')) return 'Entry Level';
-    if (t.includes('fresher') || t.includes('trainee') || t.includes('graduate')) return 'Entry Level';
-    if (t.includes('analyst')) return 'Entry Level';
-    return 'Entry Level'; // default since we already filtered for entry-level
+    if (['sde-1', 'sde 1', 'sde-i', 'sde i', 'junior', 'jr.', 'jr ', 'fresher', 'trainee', 'graduate', 'entry level', 'entry-level'].some(k => t.includes(k))) return 'Entry Level';
+    if (['senior', 'sr.', 'sr ', 'staff', 'principal'].some(k => t.includes(k))) return 'Senior';
+    if (['lead', 'head', 'director', 'vp ', 'chief'].some(k => t.includes(k))) return 'Leadership';
+    if (['manager'].some(k => t.includes(k))) return 'Manager';
+    return 'Mid Level';
 }
 
 // ─── Ashby employmentType normalization ──────────────────────────
@@ -483,15 +479,15 @@ export async function processJob(rawJob, siteConfig, existingIDs, sessionHeaders
         return null;
     }
 
-    // 3. Title Filter
+    // 3. Spam filter
     if (isSpamOrIrrelevant(mappedJob.JobTitle)) {
         console.log(`[Pre-Filter] Rejected (spam): ${mappedJob.JobTitle}`);
         return null;
     }
 
-    // 3b. Entry-level gate — reject non-entry roles
-    if (!isEntryLevel(mappedJob.JobTitle)) {
-        console.log(`[Pre-Filter] Rejected (non-entry): ${mappedJob.JobTitle}`);
+    // 3b. Tech role gate — only accept tech jobs
+    if (!isTechRole(mappedJob.JobTitle)) {
+        console.log(`[Pre-Filter] Rejected (non-tech): ${mappedJob.JobTitle}`);
         return null;
     }
 
