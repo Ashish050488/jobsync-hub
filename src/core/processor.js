@@ -1,3 +1,46 @@
+// ─── WORKDAY FIELD MAPPING ─────────────────────────────────────
+function mapWorkdayJob(raw, companyName, sourceSite) {
+    // Description and other details will be filled by getDetails
+    let workplaceType = null;
+    let isRemote = null;
+    if (raw.remoteType && typeof raw.remoteType === 'string') {
+        workplaceType = raw.remoteType.toLowerCase();
+        isRemote = workplaceType === 'fully remote' || workplaceType === 'remote';
+    } else if ((raw.locationsText || '').toLowerCase().includes('remote')) {
+        workplaceType = 'remote';
+        isRemote = true;
+    }
+    return {
+        JobID: raw.bulletFields?.[0] ? `workday_${raw._company}_${raw.bulletFields[0]}` : null,
+        JobTitle: raw.title || null,
+        Company: companyName,
+        ApplicationURL: null, // Filled by getDetails
+        DirectApplyURL: null, // Filled by getDetails
+        Location: raw.locationsText || null,
+        AllLocations: raw.locationsText ? [raw.locationsText] : [],
+        Department: null, // Could be inferred from jobFamily facet if needed
+        Team: null,
+        Office: null,
+        ContractType: null, // Filled by getDetails
+        WorkplaceType: workplaceType,
+        IsRemote: isRemote,
+        Tags: [],
+        Description: null, // Filled by getDetails
+        DescriptionPlain: null, // Filled by getDetails
+        DescriptionLists: [],
+        AdditionalInfo: null,
+        SalaryMin: null,
+        SalaryMax: null,
+        SalaryCurrency: null,
+        SalaryInterval: null,
+        SalaryInfo: null,
+        PostedDate: null, // Filled by getDetails
+        sourceSite: sourceSite,
+        ATSPlatform: 'workday',
+        Status: 'active',
+        scrapedAt: new Date(),
+    };
+}
 import fetch from 'node-fetch';
 import { JSDOM } from 'jsdom';
 import { AbortController } from 'abort-controller';
@@ -431,6 +474,7 @@ export async function processJob(rawJob, siteConfig, existingIDs, sessionHeaders
     const isAshby = siteName.toLowerCase().includes('ashby');
     const isWorkable = siteName.toLowerCase().includes('workable');
     const isRecruitee = siteName.toLowerCase().includes('recruitee');
+    const isWorkday = siteName.toLowerCase().includes('workday');
 
     // Extract job data using rich mappers
     let mappedJob;
@@ -458,6 +502,11 @@ export async function processJob(rawJob, siteConfig, existingIDs, sessionHeaders
         const companyName = siteConfig.extractCompany ? siteConfig.extractCompany(rawJob) : siteName;
         const jobID = siteConfig.extractJobID ? siteConfig.extractJobID(rawJob) : rawJob.id;
         mappedJob = mapRecruiteeJob(rawJob, companyName, siteName);
+        mappedJob.JobID = jobID;
+    } else if (isWorkday) {
+        const companyName = siteConfig.extractCompany ? siteConfig.extractCompany(rawJob) : siteName;
+        const jobID = siteConfig.extractJobID ? siteConfig.extractJobID(rawJob) : (rawJob.bulletFields?.[0] ? `workday_${rawJob._company}_${rawJob.bulletFields[0]}` : null);
+        mappedJob = mapWorkdayJob(rawJob, companyName, siteName);
         mappedJob.JobID = jobID;
     } else if (siteConfig.extractJobID) {
         // Fallback for unknown platforms using legacy extractors
