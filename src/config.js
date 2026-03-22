@@ -10,10 +10,10 @@ import { recruiteeConfig } from './CompanyConfig/recruiteeConfig.js';
 import { workdayConfig } from './CompanyConfig/workdayConfig.js';
 
 export const SITES_CONFIG = [
-  // greenhouseConfig,
-  // ashbyConfig,
-  // leverConfig,
-  // workableConfig,
-  // recruiteeConfig,
+  greenhouseConfig,
+  ashbyConfig,
+  leverConfig,
+  workableConfig,
+  recruiteeConfig,
   workdayConfig,
 ];
