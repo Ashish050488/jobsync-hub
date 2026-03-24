@@ -1,3 +1,20 @@
+export async function deleteExpiredJobs(siteName, seenJobIds) {
+    const db = await connectToDb();
+    const jobsCollection = db.collection('jobs');
+
+    // seenJobIds is a Set of all JobID strings found in the current scrape
+    // Any job in DB for this site whose JobID is NOT in this set has been removed from the ATS
+    const seenArray = Array.from(seenJobIds);
+
+    const result = await jobsCollection.deleteMany({
+        sourceSite: siteName,
+        JobID: { $nin: seenArray }
+    });
+
+    if (result.deletedCount > 0) {
+        console.log(`[${siteName}] Deleted ${result.deletedCount} expired jobs (no longer on ATS).`);
+    }
+}
 import { createJobModel } from '../models/jobModel.js';
 import { MongoClient, ObjectId } from 'mongodb';
 import mongoose from 'mongoose';
@@ -227,14 +244,21 @@ export async function getJobsPaginated(
     if (remoteFilter) {
         query.IsRemote = true;
     }
-    if (entryLevelFilter) {
-        query.isEntryLevel = true;
-    }
-    if (roleCategoryFilter) {
-        query['autoTags.roleCategory'] = roleCategoryFilter;
-    }
-    if (experienceBandFilter) {
-        query['autoTags.experienceBand'] = experienceBandFilter;
+    if (entryLevelFilter && experienceBandFilter === 'Fresher (0-1y)') {
+        query.$or = [
+            { isEntryLevel: true },
+            { 'autoTags.experienceBand': 'Fresher (0-1y)' }
+        ];
+    } else {
+        if (entryLevelFilter) {
+            query.isEntryLevel = true;
+        }
+        if (roleCategoryFilter) {
+            query['autoTags.roleCategory'] = roleCategoryFilter;
+        }
+        if (experienceBandFilter) {
+            query['autoTags.experienceBand'] = experienceBandFilter;
+        }
     }
     if (Array.isArray(techStackFilter) && techStackFilter.length > 0) {
         query['autoTags.techStack'] = { $all: techStackFilter };

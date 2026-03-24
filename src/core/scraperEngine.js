@@ -12,12 +12,6 @@ export async function scrapeSite(siteConfig, existingIDsMap) {
     const PROCESS_CONCURRENCY = 10;
     
     const limit = siteConfig.limit || 20;
-    let offset = 0;
-    let hasMore = true;
-    let totalJobs = 0;
-
-    console.log(`\n--- Starting scrape for [${siteName}] ---`);
-
     try {
         const sessionHeaders = await initializeSession(siteConfig);
 
@@ -59,6 +53,11 @@ export async function scrapeSite(siteConfig, existingIDsMap) {
 
             const collectedForPage = [];
 
+            if (offset === 0 && siteConfig.getTotal) {
+                totalJobs = siteConfig.getTotal(data);
+            }
+
+
             for (let i = 0; i < jobs.length; i += PROCESS_CONCURRENCY) {
                 const chunk = jobs.slice(i, i + PROCESS_CONCURRENCY);
                 const processedJobs = await Promise.all(
@@ -90,12 +89,13 @@ export async function scrapeSite(siteConfig, existingIDsMap) {
         }
     } catch (error) {
         console.error(`[${siteName}] ERROR during scrape: ${error.message}.`);
+        return { newJobs: allNewJobs, seenJobIds: seenInRun, scrapedSuccessfully: false };
     }
 
     if (allNewJobs.length > 0) {
-        console.log(`\n[${siteName}] Finished. Found ${allNewJobs.length} total new jobs.`);
+        console.log(`\n[${siteName}] Finished. Found ${allNewJobs.length} new jobs. Total seen this run: ${seenInRun.size}`);
     } else {
-        console.log(`\n[${siteName}] No new jobs found.`);
+        console.log(`\n[${siteName}] No new jobs found. Total seen this run: ${seenInRun.size}`);
     }
-    return allNewJobs;
+    return { newJobs: allNewJobs, seenJobIds: seenInRun, scrapedSuccessfully: true };
 }

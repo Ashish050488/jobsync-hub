@@ -1,5 +1,5 @@
 import { SITES_CONFIG } from '../config.js';
-import { loadAllExistingIDs, deleteOldJobs } from '../Db/databaseManager.js';
+import { loadAllExistingIDs, deleteOldJobs, deleteExpiredJobs } from '../Db/databaseManager.js';
 import { scrapeSite } from '../core/scraperEngine.js';
 
 let isScraping = false; 
@@ -16,15 +16,23 @@ export const runScraper = async function () {
         const existingIDsMap = await loadAllExistingIDs();
 
         for (const siteConfig of SITES_CONFIG) {
-            if (!siteConfig || !siteConfig.siteName) continue; 
-            
+            if (!siteConfig || !siteConfig.siteName) continue;
+
             const scrapeStartTime = new Date();
-            
-            // scrapeSite handles processing and saving internally
-            const newJobs = await scrapeSite(siteConfig, existingIDsMap);
-            
+
+            const { newJobs, seenJobIds, scrapedSuccessfully } = await scrapeSite(siteConfig, existingIDsMap);
+
             console.log(`[${siteConfig.siteName}] Found ${newJobs.length} new jobs.`);
-            await deleteOldJobs(siteConfig.siteName, scrapeStartTime);
+
+            if (scrapedSuccessfully && seenJobIds.size > 0) {
+                // Scrape completed cleanly — delete anything not seen in this run
+                await deleteExpiredJobs(siteConfig.siteName, seenJobIds);
+            } else {
+                // Scrape errored or returned nothing — fall back to 7-day cleanup
+                // to avoid wrongly deleting valid jobs from an incomplete scrape
+                console.log(`[${siteConfig.siteName}] Scrape incomplete or errored — using 7-day fallback cleanup.`);
+                await deleteOldJobs(siteConfig.siteName, scrapeStartTime);
+            }
         }
         
         console.log("\n✅ All scraping complete.");
