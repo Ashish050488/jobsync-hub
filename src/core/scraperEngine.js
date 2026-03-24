@@ -10,8 +10,11 @@ export async function scrapeSite(siteConfig, existingIDsMap) {
     const seenInRun = new Set();
     const allNewJobs = [];
     const PROCESS_CONCURRENCY = 10;
-    
+
     const limit = siteConfig.limit || 20;
+    let offset = 0;
+    let hasMore = true;
+    let totalJobs = 0;
     try {
         const sessionHeaders = await initializeSession(siteConfig);
 
