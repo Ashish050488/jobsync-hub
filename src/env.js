@@ -4,6 +4,9 @@ dotenv.config();
 export const GROQ_API_KEY = process.env.GEMINI_API_KEY; // Get this from aistudio.google.com
 export const MONGO_URI = process.env.MONGO_URI;
 
+export const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
+export const JWT_SECRET = process.env.JWT_SECRET;
+
 export const EMAIL_CONFIG = {
     host: 'smtp.gmail.com',
     port: 587,

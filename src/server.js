@@ -1,12 +1,16 @@
 import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
+import cookieParser from 'cookie-parser';
 import cron from 'node-cron';
 import { client, connectToDb } from './Db/databaseManager.js';
 import { runScraper } from './tasks/runScraper.js';
 import { jobsApiRouter } from './api/jobs.routes.js';
 import usersRouter from './api/users.routes.js';
 import adminRouter from './api/admin.routes.js';
+import authRouter from './api/auth.routes.js';
+import meRouter from './api/me.routes.js';
+import { authenticate } from './middleware/authMiddleware.js';
 import { ensureUserIndexes } from './models/userModel.js';
 import { ensureJobIndexes } from './models/jobModel.js';
 
@@ -15,12 +19,18 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 // --- Middleware ---
-app.use(cors());
+app.use(cors({
+    origin: process.env.FRONTEND_URL || 'http://localhost:5173',
+    credentials: true,
+}));
 app.use(express.json());
+app.use(cookieParser());
 
 // --- API Routes ---
+app.use('/api/auth', authRouter);
+app.use('/api/me', authenticate, meRouter);
 app.use('/api/jobs', jobsApiRouter);
-app.use('/api/users', usersRouter);
+app.use('/api/users', usersRouter); // legacy, can remove after migration
 app.use('/api/admin', adminRouter);
 
 // --- Health Check Endpoint ---
