@@ -7,12 +7,15 @@ import {
     getPublicBaitJobs,
     getCompanyDirectoryStats,
     findJobById,
+    getCompanyIntel,
+    getSimilarJobs,
+    getMarketPulse,
 } from '../Db/databaseManager.js';
 
 export const jobsApiRouter = Router();
 
 // ---------------------------------------------------------
-// PUBLIC ROUTES
+// PUBLIC ROUTES  — NOTE: specific paths must come before /:id
 // ---------------------------------------------------------
 
 jobsApiRouter.get('/public-bait', async (req, res) => {
@@ -28,28 +31,27 @@ jobsApiRouter.get('/', async (req, res) => {
     try {
         const page = parseInt(req.query.page) || 1;
         const limit = parseInt(req.query.limit) || 50;
-        const company = req.query.company || null;
-        const platform = req.query.platform || null;
-        const remote = req.query.remote || null;
-        const entryLevel = req.query.entryLevel || null;
-        const roleCategory = req.query.roleCategory || null;
-        const experienceBand = req.query.experienceBand || null;
+        const company = req.query.company?.trim() || null;
+        const platform = req.query.platform?.trim()?.toLowerCase() || null;
+        const remote = req.query.remote === 'true' ? true : null;
+        const entryLevel = req.query.entryLevel === 'true' ? true : null;
+        const roleCategory = req.query.roleCategory?.trim() || null;
+        const experienceBand = req.query.experienceBand?.trim() || null;
         const techStack = typeof req.query.techStack === 'string'
             ? req.query.techStack.split(',').map(tag => tag.trim()).filter(Boolean)
             : [];
+        // New: date range (1d | 3d | 7d | 30d) and free-text search
+        const dateFilter = req.query.date?.trim() || null;
+        const searchFilter = req.query.search?.trim() || null;
+
         const data = await getJobsPaginated(
-            page,
-            limit,
-            company,
-            platform,
-            remote,
-            entryLevel,
-            roleCategory,
-            experienceBand,
-            techStack,
+            page, limit, company, platform, remote, entryLevel,
+            roleCategory, experienceBand, techStack,
+            dateFilter, searchFilter,
         );
         res.status(200).json(data);
     } catch (error) {
+        console.error('[GET /jobs]', error);
         res.status(500).json({ error: "Failed to fetch jobs" });
     }
 });
@@ -63,6 +65,38 @@ jobsApiRouter.get('/directory', async (req, res) => {
     }
 });
 
+// GET /market-pulse — role category trends (6-hour cache)
+jobsApiRouter.get('/market-pulse', async (req, res) => {
+    try {
+        const data = await getMarketPulse();
+        res.status(200).json(data);
+    } catch (error) {
+        res.status(500).json({ error: 'Failed to fetch market pulse' });
+    }
+});
+
+// GET /company-intel/:companyName — hiring intelligence (1-hour cache)
+jobsApiRouter.get('/company-intel/:companyName', async (req, res) => {
+    try {
+        const data = await getCompanyIntel(decodeURIComponent(req.params.companyName));
+        res.status(200).json(data);
+    } catch (error) {
+        res.status(500).json({ error: 'Failed to fetch company intel' });
+    }
+});
+
+// GET /similar/:jobId — similar jobs at other companies
+jobsApiRouter.get('/similar/:jobId', async (req, res) => {
+    try {
+        if (!ObjectId.isValid(req.params.jobId)) return res.status(400).json({ error: 'Invalid ID' });
+        const jobs = await getSimilarJobs(req.params.jobId);
+        res.status(200).json(jobs);
+    } catch (error) {
+        res.status(500).json({ error: 'Failed to fetch similar jobs' });
+    }
+});
+
+// GET /:id — must be after all named paths
 jobsApiRouter.get('/:id', async (req, res) => {
     try {
         const { id } = req.params;

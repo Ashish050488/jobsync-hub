@@ -48,6 +48,43 @@ import { AbortController } from 'abort-controller';
 import { createJobModel } from '../models/jobModel.js';
 import { BANNED_ROLES, TECH_ROLE_KEYWORDS } from '../utils.js';
 
+/**
+ * Centralised PostedDate validator.
+ * - Accepts ISO strings, Unix millisecond timestamps (number or numeric string)
+ * - Rejects dates older than MAX_AGE_DAYS (90 days by default)
+ * - Rejects dates more than 2 days in the future (clock skew tolerance)
+ * Returns a valid Date or null.
+ */
+const MAX_AGE_DAYS = 90;
+function validatePostedDate(raw, label) {
+    if (!raw && raw !== 0) return null;
+    let d;
+    // Handle Unix millisecond timestamp (number or numeric string)
+    const asNum = typeof raw === 'number' ? raw : (typeof raw === 'string' && /^\d{10,13}$/.test(raw.trim()) ? Number(raw) : NaN);
+    if (!isNaN(asNum)) {
+        // 13-digit = ms, 10-digit = seconds
+        d = new Date(asNum > 1e11 ? asNum : asNum * 1000);
+    } else {
+        d = new Date(raw);
+    }
+    if (isNaN(d.getTime())) return null;
+
+    const now = Date.now();
+    const ageMs = now - d.getTime();
+    const maxMs = MAX_AGE_DAYS * 86400000;
+    const futureMs = 2 * 86400000; // 2-day tolerance
+
+    if (ageMs > maxMs) {
+        console.warn(`[processor] PostedDate too old (${MAX_AGE_DAYS}d limit) ${label ? '(' + label + ')' : ''}: ${raw} → ${d.toISOString()}`);
+        return null;
+    }
+    if (d.getTime() > now + futureMs) {
+        console.warn(`[processor] PostedDate in the future ${label ? '(' + label + ')' : ''}: ${raw} → ${d.toISOString()}`);
+        return null;
+    }
+    return d;
+}
+
 function isSpamOrIrrelevant(title) {
     const lowerTitle = title.toLowerCase();
     return BANNED_ROLES.some(role => lowerTitle.includes(role));
@@ -90,15 +127,7 @@ function mapLeverJob(raw, companyName, sourceSite) {
 
     let postedDate = null;
     if (raw.createdAt) {
-        postedDate = new Date(raw.createdAt); // createdAt is already ms
-        if (isNaN(postedDate.getTime())) postedDate = null;
-    }
-    if (postedDate) {
-        const yr = postedDate.getFullYear();
-        if (yr < 2020 || yr > new Date().getFullYear() + 1) {
-            console.warn('[processor] Suspicious PostedDate:', raw.createdAt, '→', postedDate);
-            postedDate = null;
-        }
+        postedDate = validatePostedDate(raw.createdAt, `Lever/${raw.id}`);
     }
 
     return {
@@ -136,8 +165,7 @@ function mapLeverJob(raw, companyName, sourceSite) {
 function mapGreenhouseJob(raw, companyName, sourceSite) {
     let postedDate = null;
     if (raw.updated_at) {
-        postedDate = new Date(raw.updated_at);
-        if (isNaN(postedDate.getTime())) postedDate = null;
+        postedDate = validatePostedDate(raw.updated_at, `Greenhouse/${raw.id}`);
     }
 
     let salaryInfo = null;
@@ -209,12 +237,10 @@ function mapGreenhouseJob(raw, companyName, sourceSite) {
 function mapWorkableJob(raw, companyName, sourceSite) {
     let postedDate = null;
     if (raw.published_on) {
-        postedDate = new Date(raw.published_on);
-        if (isNaN(postedDate.getTime())) postedDate = null;
+        postedDate = validatePostedDate(raw.published_on, `Workable/${raw.shortcode}`);
     }
     if (!postedDate && raw.created_at) {
-        postedDate = new Date(raw.created_at);
-        if (isNaN(postedDate.getTime())) postedDate = null;
+        postedDate = validatePostedDate(raw.created_at, `Workable/${raw.shortcode}/created_at`);
     }
 
     const wt = raw.workplace_type;
@@ -281,12 +307,10 @@ function mapWorkableJob(raw, companyName, sourceSite) {
 function mapAshbyJob(raw, companyName, sourceSite) {
     let postedDate = null;
     if (raw.publishedDate) {
-        postedDate = new Date(raw.publishedDate);
-        if (isNaN(postedDate.getTime())) postedDate = null;
+        postedDate = validatePostedDate(raw.publishedDate, `Ashby/${raw.id}`);
     }
     if (!postedDate && raw.createdAt) {
-        postedDate = new Date(raw.createdAt);
-        if (isNaN(postedDate.getTime())) postedDate = null;
+        postedDate = validatePostedDate(raw.createdAt, `Ashby/${raw.id}/createdAt`);
     }
 
     // Build AllLocations from primary + secondary
@@ -365,12 +389,10 @@ function normalizeRecruiteeWorkplace(raw) {
 function mapRecruiteeJob(raw, companyName, sourceSite) {
     let postedDate = null;
     if (raw.published_at) {
-        postedDate = new Date(raw.published_at);
-        if (isNaN(postedDate.getTime())) postedDate = null;
+        postedDate = validatePostedDate(raw.published_at, `Recruitee/${raw.id}`);
     }
     if (!postedDate && raw.created_at) {
-        postedDate = new Date(raw.created_at);
-        if (isNaN(postedDate.getTime())) postedDate = null;
+        postedDate = validatePostedDate(raw.created_at, `Recruitee/${raw.id}/created_at`);
     }
 
     const allLocs = Array.isArray(raw.locations)
@@ -548,18 +570,18 @@ export async function processJob(rawJob, siteConfig, existingIDs, sessionHeaders
         const titleLower = mappedJob.JobTitle.toLowerCase();
         if (!siteConfig.filterKeywords.some(kw => titleLower.includes(kw.toLowerCase()))) return null;
     }
-    
+
     // 5. Get Description
     if ((siteConfig.needsDescriptionScraping && !mappedJob.Description)) {
         if (typeof siteConfig.getDetails === 'function') {
             try {
                 const details = await siteConfig.getDetails(rawJob, sessionHeaders);
-                
+
                 if (details && details.skip) {
                     console.log(`[${siteConfig.siteName}] Job skipped by getDetails`);
                     return null;
                 }
-                
+
                 if (details) {
                     Object.assign(mappedJob, details);
                 }
@@ -571,7 +593,7 @@ export async function processJob(rawJob, siteConfig, existingIDs, sessionHeaders
             mappedJob = await scrapeJobDetailsFromPage(mappedJob, siteConfig);
         }
     }
-    
+
     if (!mappedJob.Description) return null;
 
     // Job accepted — save as active

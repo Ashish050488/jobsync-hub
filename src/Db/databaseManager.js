@@ -28,9 +28,9 @@ let db;
 
 export async function connectToDb() {
     if (db) return db;
-    
+
     await client.connect();
-    
+
     if (mongoose.connection.readyState === 0) {
         await mongoose.connect(MONGO_URI);
         console.log("🍃 Mongoose Connected");
@@ -107,7 +107,7 @@ export async function saveJobTestLog(jobTestLog) {
     const testLogsCollection = db.collection('jobTestLogs');
 
     const { createdAt, ...pureJobData } = jobTestLog;
-    
+
     await testLogsCollection.updateOne(
         { JobID: jobTestLog.JobID, sourceSite: jobTestLog.sourceSite },
         {
@@ -124,15 +124,15 @@ export async function saveJobTestLog(jobTestLog) {
 export async function deleteOldJobs(siteName, scrapeStartTime) {
     const db = await connectToDb();
     const jobsCollection = db.collection('jobs');
-    
+
     const sevenDaysAgo = new Date();
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-    
+
     const result = await jobsCollection.deleteMany({
         sourceSite: siteName,
         updatedAt: { $lt: sevenDaysAgo }
     });
-    
+
     if (result.deletedCount > 0) {
         console.log(`[${siteName}] Deleted ${result.deletedCount} jobs older than 7 days.`);
     }
@@ -161,7 +161,7 @@ export async function addCuratedJob(jobData) {
         throw new Error('This Application URL already exists in the database.');
     }
     const jobID = `curated-${new Date().getTime()}`;
-    
+
     const jobToSave = createJobModel({
         JobID: jobID,
         JobTitle: jobData.JobTitle,
@@ -202,7 +202,7 @@ export async function getAllJobs(page = 1, limit = 50) {
 export async function getPublicBaitJobs() {
     const db = await connectToDb();
     const jobsCollection = db.collection('jobs');
-    
+
     const jobs = await jobsCollection.find({
         Status: 'active'
     })
@@ -228,53 +228,133 @@ export async function getJobsPaginated(
     roleCategoryFilter = null,
     experienceBandFilter = null,
     techStackFilter = [],
+    dateFilter = null,
+    searchFilter = null,
 ) {
     const db = await connectToDb();
     const jobsCollection = db.collection('jobs');
     const skip = (page - 1) * limit;
 
-    const query = { Status: 'active' };
+    // ── Base: only active jobs ──────────────────────────────────────────────
+    const must = [{ Status: 'active' }];
 
-    if (companyFilter) {
-        query.Company = { $regex: companyFilter, $options: 'i' };
+    // ── Company ─────────────────────────────────────────────────────────────
+    if (companyFilter && companyFilter.trim()) {
+        must.push({ Company: { $regex: companyFilter.trim(), $options: 'i' } });
     }
-    if (platformFilter) {
-        query.ATSPlatform = platformFilter;
+
+    // ── ATS Platform ────────────────────────────────────────────────────────
+    if (platformFilter && platformFilter.trim()) {
+        must.push({ ATSPlatform: platformFilter.trim().toLowerCase() });
     }
+
+    // ── Remote / Workplace ──────────────────────────────────────────────────
+    // Matches on WorkplaceType field OR the word "remote" anywhere in Location/Title.
+    // Uses $or so either signal is sufficient.
     if (remoteFilter) {
-        query.IsRemote = true;
+        must.push({
+            $or: [
+                { WorkplaceType: { $regex: 'remote', $options: 'i' } },
+                { Location: { $regex: 'remote', $options: 'i' } },
+                { JobTitle: { $regex: 'remote', $options: 'i' } },
+                { IsRemote: true },
+            ],
+        });
     }
-    if (entryLevelFilter && experienceBandFilter === 'Fresher (0-1y)') {
-        query.$or = [
-            { isEntryLevel: true },
-            { 'autoTags.experienceBand': 'Fresher (0-1y)' }
-        ];
-    } else {
-        if (entryLevelFilter) {
-            query.isEntryLevel = true;
-        }
-        if (roleCategoryFilter) {
-            query['autoTags.roleCategory'] = roleCategoryFilter;
-        }
-        if (experienceBandFilter) {
-            query['autoTags.experienceBand'] = experienceBandFilter;
-        }
+
+    // ── Role Category ────────────────────────────────────────────────────────
+    if (roleCategoryFilter && roleCategoryFilter.trim()) {
+        must.push({ 'autoTags.roleCategory': roleCategoryFilter.trim() });
     }
+
+    // ── Experience Band ──────────────────────────────────────────────────────
+    // For Fresher (0-1y) we also accept jobs tagged isEntryLevel=true (belt-and-suspenders).
+    if (experienceBandFilter && experienceBandFilter.trim()) {
+        const isFresher =
+            experienceBandFilter === 'Fresher (0-1y)' ||
+            experienceBandFilter === 'fresher' ||
+            experienceBandFilter === 'Entry Level';
+
+        if (isFresher) {
+            must.push({
+                $or: [
+                    { 'autoTags.experienceBand': experienceBandFilter.trim() },
+                    { isEntryLevel: true },
+                ],
+            });
+        } else {
+            must.push({ 'autoTags.experienceBand': experienceBandFilter.trim() });
+        }
+    } else if (entryLevelFilter) {
+        // entryLevel checkbox without a specific band — match either signal
+        must.push({
+            $or: [
+                { isEntryLevel: true },
+                { 'autoTags.experienceBand': 'Fresher (0-1y)' },
+            ],
+        });
+    }
+
+    // ── Tech Stack ───────────────────────────────────────────────────────────
     if (Array.isArray(techStackFilter) && techStackFilter.length > 0) {
-        query['autoTags.techStack'] = { $all: techStackFilter };
+        const cleanedStack = techStackFilter.map(t => t.trim()).filter(Boolean);
+        if (cleanedStack.length > 0) {
+            must.push({ 'autoTags.techStack': { $all: cleanedStack } });
+        }
     }
 
-    const totalJobs = await jobsCollection.countDocuments(query);
-    const jobs = await jobsCollection.find(query)
-        .sort({ PostedDate: -1, createdAt: -1 })
-        .skip(skip)
-        .limit(limit)
-        .project({ __v: 0 })
-        .toArray();
+    // ── Date Filter ──────────────────────────────────────────────────────────
+    if (dateFilter) {
+        const daysMap = { '1d': 1, '3d': 3, '7d': 7, '30d': 30 };
+        const days = daysMap[dateFilter];
+        if (days) {
+            const since = new Date(Date.now() - days * 86400000);
+            must.push({
+                $or: [
+                    { PostedDate: { $gte: since.toISOString() } },
+                    { scrapedAt: { $gte: since } },
+                ],
+            });
+        }
+    }
 
-    const companies = await jobsCollection.distinct('Company', { Status: 'active' });
+    // ── Full-text search ─────────────────────────────────────────────────────
+    // Searches title, company, location, techStack tags.
+    if (searchFilter && searchFilter.trim().length >= 2) {
+        const escaped = searchFilter.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const re = { $regex: escaped, $options: 'i' };
+        must.push({
+            $or: [
+                { JobTitle: re },
+                { Company: re },
+                { Location: re },
+                { 'autoTags.techStack': re },
+                { Department: re },
+            ],
+        });
+    }
 
-    return { jobs, totalJobs, totalPages: Math.ceil(totalJobs / limit), currentPage: page, companies };
+    // ── Compose final query ──────────────────────────────────────────────────
+    const query = must.length === 1 ? must[0] : { $and: must };
+
+    const [totalJobs, jobs, companies] = await Promise.all([
+        jobsCollection.countDocuments(query),
+        jobsCollection.find(query)
+            .sort({ PostedDate: -1, scrapedAt: -1 })
+            .skip(skip)
+            .limit(limit)
+            .project({ __v: 0 })
+            .toArray(),
+        jobsCollection.distinct('Company', { Status: 'active' }),
+    ]);
+
+    return {
+        jobs,
+        totalJobs,
+        totalPages: Math.ceil(totalJobs / limit),
+        currentPage: page,
+        companies,
+    };
 }
 
 export async function getCompanyDirectoryStats() {
@@ -282,12 +362,12 @@ export async function getCompanyDirectoryStats() {
         const db = await connectToDb();
 
         const jobsCollection = db.collection('jobs');
-        
+
         const pipeline = [
-            { 
-                $match: { 
+            {
+                $match: {
                     Status: 'active'
-                } 
+                }
             },
             {
                 $group: {
@@ -302,7 +382,7 @@ export async function getCompanyDirectoryStats() {
         const scrapedStats = await jobsCollection.aggregate(pipeline).toArray();
 
         const formattedScraped = scrapedStats.map(stat => ({
-            _id: stat._id, 
+            _id: stat._id,
             companyName: stat._id || "Unknown",
             openRoles: stat.openRoles,
             cities: [...new Set((stat.locations || []).map(l => l.split(',')[0].trim()))].slice(0, 2),
@@ -316,7 +396,7 @@ export async function getCompanyDirectoryStats() {
         const formattedManual = manualCompanies.map(c => ({
             _id: c._id.toString(),
             companyName: c.name,
-            openRoles: 0, 
+            openRoles: 0,
             cities: c.cities ? c.cities.split(',').map(s => s.trim()) : [],
             domain: c.domain,
             source: 'manual'
@@ -367,3 +447,155 @@ export async function deleteManualCompany(id) {
     await companiesCollection.deleteOne({ _id: new ObjectId(id) });
 }
 
+// ─── Company Intel (1-hour in-memory cache) ────────────────────────
+const companyIntelCache = new Map();
+
+export async function getCompanyIntel(companyName) {
+    // Guard: empty or non-string input
+    if (!companyName || typeof companyName !== 'string' || !companyName.trim()) {
+        return {
+            companyName: '', totalOpenRoles: 0, newRolesThisWeek: 0, newRolesLastWeek: 0,
+            avgRoleAgeDays: 0, oldestRoleDays: 0, newestRoleDays: 0, hiringTrend: 'stable',
+            peakPostingDay: null, busiestDays: [], postingDayDistribution: [0, 0, 0, 0, 0, 0, 0]
+        };
+    }
+    const cacheKey = companyName.trim().toLowerCase();
+    const cached = companyIntelCache.get(cacheKey);
+    if (cached && (Date.now() - cached.timestamp) < 3600000) return cached.data;
+
+    const db = await connectToDb();
+    const jobsCollection = db.collection('jobs');
+    const now = new Date();
+    const sevenDaysAgo = new Date(now - 7 * 86400000);
+    const fourteenDaysAgo = new Date(now - 14 * 86400000);
+
+    const escapedName = companyName.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const jobs = await jobsCollection.find(
+        { Company: { $regex: new RegExp(`^${escapedName}$`, 'i') }, Status: 'active' },
+        { projection: { PostedDate: 1, createdAt: 1, scrapedAt: 1 } }
+    ).toArray();
+
+    const totalOpenRoles = jobs.length;
+    const newRolesThisWeek = jobs.filter(j => new Date(j.createdAt || j.scrapedAt) >= sevenDaysAgo).length;
+    const newRolesLastWeek = jobs.filter(j => {
+        const d = new Date(j.createdAt || j.scrapedAt);
+        return d >= fourteenDaysAgo && d < sevenDaysAgo;
+    }).length;
+
+    const ages = jobs.map(j => Math.floor((now - new Date(j.PostedDate || j.createdAt || j.scrapedAt)) / 86400000)).filter(a => Number.isFinite(a) && a >= 0);
+    const avgRoleAgeDays = ages.length > 0 ? Math.round(ages.reduce((a, b) => a + b, 0) / ages.length) : 0;
+    const oldestRoleDays = ages.length > 0 ? Math.max(...ages) : 0;
+    const newestRoleDays = ages.length > 0 ? Math.min(...ages) : 0;
+
+    let hiringTrend = 'stable';
+    if (newRolesThisWeek > newRolesLastWeek) hiringTrend = 'up';
+    else if (newRolesThisWeek < newRolesLastWeek) hiringTrend = 'down';
+
+    const dayCounts = [0, 0, 0, 0, 0, 0, 0];
+    for (const job of jobs) {
+        const posted = new Date(job.PostedDate || job.createdAt || job.scrapedAt);
+        if (!isNaN(posted.getTime())) dayCounts[posted.getDay()]++;
+    }
+    const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    const dayPairs = dayCounts.map((count, i) => ({ day: dayNames[i], count }));
+    dayPairs.sort((a, b) => b.count - a.count);
+    const busiestDays = dayPairs.filter(d => d.count > 0).slice(0, 3).map(d => d.day);
+
+    const data = {
+        companyName: companyName.trim(), totalOpenRoles, newRolesThisWeek, newRolesLastWeek,
+        avgRoleAgeDays, oldestRoleDays, newestRoleDays, hiringTrend,
+        peakPostingDay: busiestDays[0] || null, busiestDays,
+        postingDayDistribution: dayCounts,
+    };
+    companyIntelCache.set(cacheKey, { data, timestamp: Date.now() });
+    return data;
+}
+
+// ─── Similar Jobs ───────────────────────────────────────────────────
+export async function getSimilarJobs(jobId) {
+    const db = await connectToDb();
+    const jobsCollection = db.collection('jobs');
+    let oid;
+    try { oid = new ObjectId(jobId); } catch { return []; }
+
+    const job = await jobsCollection.findOne({ _id: oid }, { projection: { Company: 1, autoTags: 1 } });
+    if (!job) return [];
+
+    // Build query — always filter by different company; match tags when available
+    const query = { _id: { $ne: oid }, Status: 'active', Company: { $ne: job.Company || '' } };
+    if (job.autoTags?.roleCategory) query['autoTags.roleCategory'] = job.autoTags.roleCategory;
+    if (job.autoTags?.experienceBand) query['autoTags.experienceBand'] = job.autoTags.experienceBand;
+
+    const results = await jobsCollection.find(query)
+        .sort({ createdAt: -1, PostedDate: -1 })
+        .limit(8)
+        .project({ JobTitle: 1, Company: 1, Location: 1, ApplicationURL: 1, PostedDate: 1, autoTags: 1, scrapedAt: 1 })
+        .toArray();
+
+    // Fallback: if no tagged matches exist, return recent active jobs from other companies
+    if (results.length === 0) {
+        return jobsCollection.find({ _id: { $ne: oid }, Status: 'active', Company: { $ne: job.Company || '' } })
+            .sort({ createdAt: -1 })
+            .limit(8)
+            .project({ JobTitle: 1, Company: 1, Location: 1, ApplicationURL: 1, PostedDate: 1, autoTags: 1, scrapedAt: 1 })
+            .toArray();
+    }
+    return results;
+}
+
+// ─── Market Pulse (6-hour in-memory cache) ──────────────────────────
+let marketPulseCache = null;
+
+export async function getMarketPulse() {
+    if (marketPulseCache && (Date.now() - marketPulseCache.timestamp) < 21600000) return marketPulseCache.data;
+
+    const db = await connectToDb();
+    const jobsCollection = db.collection('jobs');
+    const now = new Date();
+    const sevenDaysAgo = new Date(now - 7 * 86400000);
+    const fourteenDaysAgo = new Date(now - 14 * 86400000);
+
+    let currentCounts, thisWeekCounts, lastWeekCounts;
+    try {
+        [currentCounts, thisWeekCounts, lastWeekCounts] = await Promise.all([
+            jobsCollection.aggregate([
+                { $match: { Status: 'active', 'autoTags.roleCategory': { $exists: true, $ne: null, $type: 'string' } } },
+                { $group: { _id: '$autoTags.roleCategory', count: { $sum: 1 } } },
+                { $sort: { count: -1 } }
+            ]).toArray(),
+            jobsCollection.aggregate([
+                { $match: { Status: 'active', createdAt: { $gte: sevenDaysAgo }, 'autoTags.roleCategory': { $exists: true, $type: 'string' } } },
+                { $group: { _id: '$autoTags.roleCategory', count: { $sum: 1 } } }
+            ]).toArray(),
+            jobsCollection.aggregate([
+                { $match: { Status: 'active', createdAt: { $gte: fourteenDaysAgo, $lte: sevenDaysAgo }, 'autoTags.roleCategory': { $exists: true, $type: 'string' } } },
+                { $group: { _id: '$autoTags.roleCategory', count: { $sum: 1 } } }
+            ]).toArray(),
+        ]);
+    } catch (err) {
+        console.error('[getMarketPulse] aggregation failed:', err);
+        // Return stale cache if available rather than crashing
+        if (marketPulseCache) return marketPulseCache.data;
+        return { categories: [], totalJobs: 0, updatedAt: now.toISOString() };
+    }
+
+    const thisWeekMap = new Map(thisWeekCounts.map(r => [r._id, r.count]));
+    const lastWeekMap = new Map(lastWeekCounts.map(r => [r._id, r.count]));
+
+    const categories = currentCounts
+        .filter(cat => cat._id && typeof cat._id === 'string')
+        .map(cat => {
+            const tw = thisWeekMap.get(cat._id) || 0;
+            const lw = lastWeekMap.get(cat._id) || 0;
+            let trendPercent = lw > 0 ? Math.round(((tw - lw) / lw) * 100) : (tw > 0 ? 100 : 0);
+            // Cap extreme values for display
+            trendPercent = Math.max(-200, Math.min(200, trendPercent));
+            const trend = trendPercent > 5 ? 'up' : trendPercent < -5 ? 'down' : 'stable';
+            return { category: cat._id, totalRoles: cat.count, newThisWeek: tw, trendPercent, trend };
+        });
+
+    const totalJobs = categories.reduce((sum, c) => sum + c.totalRoles, 0);
+    const data = { categories, totalJobs, updatedAt: now.toISOString() };
+    marketPulseCache = { data, timestamp: Date.now() };
+    return data;
+}
