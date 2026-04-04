@@ -33,7 +33,8 @@ jobsApiRouter.get('/', async (req, res) => {
         const limit = parseInt(req.query.limit) || 50;
         const company = req.query.company?.trim() || null;
         const platform = req.query.platform?.trim()?.toLowerCase() || null;
-        const remote = req.query.remote === 'true' ? true : null;
+        const workplace = req.query.workplace?.trim()?.toLowerCase()
+            || (req.query.remote === 'true' ? 'remote' : null);
         const entryLevel = req.query.entryLevel === 'true' ? true : null;
         const roleCategory = req.query.roleCategory?.trim() || null;
         const experienceBand = req.query.experienceBand?.trim() || null;
@@ -45,7 +46,7 @@ jobsApiRouter.get('/', async (req, res) => {
         const searchFilter = req.query.search?.trim() || null;
 
         const data = await getJobsPaginated(
-            page, limit, company, platform, remote, entryLevel,
+            page, limit, company, platform, workplace, entryLevel,
             roleCategory, experienceBand, techStack,
             dateFilter, searchFilter,
         );

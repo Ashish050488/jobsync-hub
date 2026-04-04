@@ -10,10 +10,10 @@ const EMPTY_AUTO_TAGS = {
     education: null,
 };
 
-const LEADERSHIP_CONTEXT = /(lead(?:ership)?|manager(?:ial|ment)?|people management|managed teams?|team lead|mentoring|mentor(?:ing)?|stakeholder management|cross-functional leadership)/i;
+const LEADERSHIP_CONTEXT = /(leadership|manager(?:ial|ment)?|people management|managed teams?|team lead|mentoring|mentor(?:ing)?|stakeholder management|cross-functional leadership)/i;
 
 const EXPERIENCE_RANGE_REGEX = /\b(\d{1,2})\s*(?:\+)?\s*(?:-|–|to)\s*(\d{1,2})\s*(?:years?|yrs?)\b/gi;
-const EXPERIENCE_SINGLE_REGEX = /\b(?:minimum\s+|at\s+least\s+)?(\d{1,2})\s*\+?\s*(?:years?|yrs?)\b(?:\s+of\s+experience)?/gi;
+const EXPERIENCE_SINGLE_REGEX = /\b(?:minimum\s+|minimum\s+of\s+|at\s+least\s+|around\s+)?(\d{1,2})\s*(\+)?\s*(?:years?|yrs?)\b(?:\s+of\s+experience)?/gi;
 
 const STRONG_ENTRY_REGEXES = [
     /\bfreshers?\b/i,
@@ -48,14 +48,6 @@ const MODERATE_ENTRY_CHECKS = [
 
 const STRONG_NEGATIVE_TITLE = /\b(?:senior|sr\.?|staff|principal|lead|director|head\s+of|vp|vice\s+president|manager|architect)\b/i;
 const STRONG_NEGATIVE_TEXT = /\b(?:extensive\s+experience|proven\s+track\s+record|deep\s+expertise)\b/i;
-
-const EXPERIENCE_BANDS = [
-    { label: 'Fresher (0-1y)', match: ({ min, max }) => min === 0 && max <= 2 },
-    { label: 'Junior (1-3y)', match: ({ value }) => value >= 1 && value <= 3 },
-    { label: 'Mid (3-5y)', match: ({ value }) => value > 3 && value <= 5 },
-    { label: 'Senior (5-8y)', match: ({ value }) => value > 5 && value <= 8 },
-    { label: 'Staff+ (8y+)', match: ({ value }) => value > 8 },
-];
 
 const DOMAIN_RULES = [
     { label: 'Fintech', regex: /\b(?:fintech|banking|lending|insurance|financial\s+services|neobank|trading|investment)\b/gi },
@@ -429,31 +421,66 @@ function extractExperienceMentions(text) {
         const index = match.index ?? 0;
         const context = text.slice(Math.max(0, index - 40), Math.min(text.length, index + match[0].length + 40));
         if (LEADERSHIP_CONTEXT.test(context)) continue;
-        mentions.push({ min, max, value: max, raw: match[0], index });
+        mentions.push({ min, max, raw: match[0], index, hasPlus: false, kind: 'range' });
     }
 
     for (const match of text.matchAll(EXPERIENCE_SINGLE_REGEX)) {
         const min = Number(match[1]);
+        const hasPlus = match[2] === '+';
         const index = match.index ?? 0;
         const context = text.slice(Math.max(0, index - 40), Math.min(text.length, index + match[0].length + 40));
         if (LEADERSHIP_CONTEXT.test(context)) continue;
-        mentions.push({ min, max: min, value: min, raw: match[0], index });
+        mentions.push({ min, max: min, raw: match[0], index, hasPlus, kind: 'single' });
     }
 
     return mentions;
 }
 
+function bandFromExperienceMention(mention) {
+    if (!mention) return null;
+
+    if (mention.kind === 'range') {
+        const { min, max } = mention;
+        if (min === 0 && max <= 1) return 'Fresher (0-1y)';
+        if (min <= 1 && max <= 3) return 'Junior (1-3y)';
+        if (min >= 8) return 'Staff+ (8y+)';
+        if (min >= 5) return 'Senior (5-8y)';
+        if (min >= 3) return 'Mid (3-5y)';
+        if (max <= 1) return 'Fresher (0-1y)';
+        if (max <= 3) return 'Junior (1-3y)';
+        if (max <= 5) return 'Mid (3-5y)';
+        if (max <= 8) return 'Senior (5-8y)';
+        return 'Staff+ (8y+)';
+    }
+
+    const { min, hasPlus } = mention;
+    if (hasPlus) {
+        if (min >= 8) return 'Staff+ (8y+)';
+        if (min >= 5) return 'Senior (5-8y)';
+        if (min >= 3) return 'Mid (3-5y)';
+        if (min >= 1) return 'Junior (1-3y)';
+        return 'Fresher (0-1y)';
+    }
+
+    if (min <= 1) return 'Fresher (0-1y)';
+    if (min <= 3) return 'Junior (1-3y)';
+    if (min <= 5) return 'Mid (3-5y)';
+    if (min <= 8) return 'Senior (5-8y)';
+    return 'Staff+ (8y+)';
+}
+
 function inferExperienceBand(job) {
     const title = `${job.JobTitle ?? ''}`;
     const text = getPlainDescription(job);
-    const mentions = extractExperienceMentions(text).sort((a, b) => b.value - a.value);
+    const mentions = extractExperienceMentions(text).sort((a, b) => {
+        if (b.min !== a.min) return b.min - a.min;
+        if ((b.hasPlus ? 1 : 0) !== (a.hasPlus ? 1 : 0)) return (b.hasPlus ? 1 : 0) - (a.hasPlus ? 1 : 0);
+        if (b.max !== a.max) return b.max - a.max;
+        return a.index - b.index;
+    });
 
     if (mentions.length > 0) {
-        const selected = mentions[0];
-        const band = EXPERIENCE_BANDS.find(entry => entry.match(selected));
-        if (band) return band.label;
-        if (selected.value >= 8) return 'Staff+ (8y+)';
-        if (selected.value >= 5) return 'Senior (5-8y)';
+        return bandFromExperienceMention(mentions[0]);
     }
 
     if (/\b(?:principal|staff)\b/i.test(title)) return 'Staff+ (8y+)';
@@ -469,7 +496,7 @@ function inferEntryLevel(job, experienceBand) {
     const title = `${job.JobTitle ?? ''}`;
     const text = `${title} ${getPlainDescription(job)}`;
 
-    const strongNegativeYears = extractExperienceMentions(getPlainDescription(job)).some(item => item.value >= 5);
+    const strongNegativeYears = extractExperienceMentions(getPlainDescription(job)).some(item => item.min >= 2 || item.max >= 2);
     const strongNegative = STRONG_NEGATIVE_TITLE.test(title) || strongNegativeYears || STRONG_NEGATIVE_TEXT.test(text);
     if (strongNegative) return false;
 

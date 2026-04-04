@@ -223,7 +223,7 @@ export async function getJobsPaginated(
     limit = 50,
     companyFilter = null,
     platformFilter = null,
-    remoteFilter = null,
+    workplaceFilter = null,
     entryLevelFilter = null,
     roleCategoryFilter = null,
     experienceBandFilter = null,
@@ -251,15 +251,35 @@ export async function getJobsPaginated(
     // ── Remote / Workplace ──────────────────────────────────────────────────
     // Matches on WorkplaceType field OR the word "remote" anywhere in Location/Title.
     // Uses $or so either signal is sufficient.
-    if (remoteFilter) {
-        must.push({
-            $or: [
-                { WorkplaceType: { $regex: 'remote', $options: 'i' } },
-                { Location: { $regex: 'remote', $options: 'i' } },
-                { JobTitle: { $regex: 'remote', $options: 'i' } },
-                { IsRemote: true },
-            ],
-        });
+    if (workplaceFilter && workplaceFilter.trim()) {
+        const workplace = workplaceFilter.trim().toLowerCase();
+
+        if (workplace === 'remote') {
+            must.push({
+                $or: [
+                    { WorkplaceType: { $regex: '^remote$', $options: 'i' } },
+                    { Location: { $regex: 'remote', $options: 'i' } },
+                    { JobTitle: { $regex: 'remote', $options: 'i' } },
+                    { IsRemote: true },
+                ],
+            });
+        } else if (workplace === 'hybrid') {
+            must.push({
+                $or: [
+                    { WorkplaceType: { $regex: '^hybrid(?: job)?$', $options: 'i' } },
+                    { Location: { $regex: 'hybrid', $options: 'i' } },
+                    { JobTitle: { $regex: 'hybrid', $options: 'i' } },
+                ],
+            });
+        } else if (workplace === 'on-site') {
+            must.push({
+                $or: [
+                    { WorkplaceType: { $regex: '^(?:on-site|onsite|onsite job)$', $options: 'i' } },
+                    { Location: { $regex: 'on.?site|in-office', $options: 'i' } },
+                    { JobTitle: { $regex: 'on.?site|in-office', $options: 'i' } },
+                ],
+            });
+        }
     }
 
     // ── Role Category ────────────────────────────────────────────────────────
@@ -309,12 +329,7 @@ export async function getJobsPaginated(
         const days = daysMap[dateFilter];
         if (days) {
             const since = new Date(Date.now() - days * 86400000);
-            must.push({
-                $or: [
-                    { PostedDate: { $gte: since.toISOString() } },
-                    { scrapedAt: { $gte: since } },
-                ],
-            });
+            must.push({ PostedDate: { $gte: since } });
         }
     }
 
