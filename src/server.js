@@ -18,6 +18,7 @@ import meRouter from './api/me.routes.js';
 import { jobsApiRouter } from './api/jobs.routes.js';
 import usersRouter from './api/users.routes.js';
 import adminRouter from './api/admin.routes.js';
+import newsRouter from './api/news.routes.js';
 
 import { authenticate } from './middleware/authMiddleware.js';
 import { notFound, errorHandler } from './middleware/errorHandler.js';
@@ -38,6 +39,7 @@ app.use('/api/me', authenticate, meRouter);
 app.use('/api/jobs', jobsApiRouter);
 app.use('/api/users', usersRouter); // legacy 410 wildcard
 app.use('/api/admin', adminRouter);
+app.use('/api/news', newsRouter);
 
 // ─── 404 + central error handler (must be last) ───────────────────
 app.use(notFound);
