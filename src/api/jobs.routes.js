@@ -6,7 +6,7 @@ import {
   addCuratedJob, deleteJobById,
 } from '../Db/jobs/index.js';
 import { getCompanyDirectoryStats, getCompanyIntel } from '../Db/companies/index.js';
-import { getSimilarJobs, getMarketPulse, getHiringLeaderboard } from '../Db/analytics/index.js';
+import { getSimilarJobs, getMarketPulse, getHiringLeaderboard, getHiringTrends } from '../Db/analytics/index.js';
 import { asyncHandler } from '../middleware/asyncHandler.js';
 import { authenticate, requireAdmin } from '../middleware/authMiddleware.js';
 import { HttpError } from '../middleware/errorHandler.js';
@@ -23,7 +23,6 @@ jobsApiRouter.get('/', asyncHandler(async (req, res) => {
   const page = parseInt(req.query.page, 10) || 1;
   const limit = parseInt(req.query.limit, 10) || 50;
   const company = req.query.company?.trim() || null;
-  const platform = req.query.platform?.trim()?.toLowerCase() || null;
   const workplace = req.query.workplace?.trim()?.toLowerCase()
     || (req.query.remote === 'true' ? 'remote' : null);
   const entryLevel = req.query.entryLevel === 'true' ? true : null;
@@ -36,7 +35,7 @@ jobsApiRouter.get('/', asyncHandler(async (req, res) => {
   const searchFilter = req.query.search?.trim() || null;
 
   const data = await getJobsPaginated(
-    page, limit, company, platform, workplace, entryLevel,
+    page, limit, company, workplace, entryLevel,
     roleCategory, experienceBand, techStack, dateFilter, searchFilter,
   );
   res.json(data);
@@ -61,6 +60,12 @@ jobsApiRouter.get('/similar/:jobId', asyncHandler(async (req, res) => {
 
 jobsApiRouter.get('/hiring-leaderboard', asyncHandler(async (_req, res) => {
   const data = await getHiringLeaderboard();
+  res.set('Cache-Control', 'public, max-age=1800, s-maxage=3600');
+  res.json(data);
+}));
+
+jobsApiRouter.get('/trends', asyncHandler(async (_req, res) => {
+  const data = await getHiringTrends();
   res.set('Cache-Control', 'public, max-age=1800, s-maxage=3600');
   res.json(data);
 }));

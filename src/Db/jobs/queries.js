@@ -11,17 +11,13 @@ const JOBS = 'jobs';
  * object suitable to pass directly to `find()` / `countDocuments()`.
  */
 function buildJobsQuery({
-  company, platform, workplace, entryLevel,
+  company, workplace, entryLevel,
   roleCategory, experienceBand, techStack, dateFilter, searchFilter,
 }) {
   const must = [{ Status: 'active' }];
 
   if (company?.trim()) {
     must.push({ Company: { $regex: company.trim(), $options: 'i' } });
-  }
-
-  if (platform?.trim()) {
-    must.push({ ATSPlatform: platform.trim().toLowerCase() });
   }
 
   if (workplace?.trim()) {
@@ -108,14 +104,14 @@ function buildJobsQuery({
  * Returns { jobs, totalJobs, totalPages, currentPage, companies }.
  */
 export async function getJobsPaginated(
-  page = 1, limit = 50, companyFilter = null, platformFilter = null,
+  page = 1, limit = 50, companyFilter = null,
   workplaceFilter = null, entryLevelFilter = null, roleCategoryFilter = null,
   experienceBandFilter = null, techStackFilter = [], dateFilter = null, searchFilter = null,
 ) {
   const jobs = await col(JOBS);
   const skip = (Math.max(1, page) - 1) * limit;
   const query = buildJobsQuery({
-    company: companyFilter, platform: platformFilter, workplace: workplaceFilter,
+    company: companyFilter, workplace: workplaceFilter,
     entryLevel: entryLevelFilter, roleCategory: roleCategoryFilter,
     experienceBand: experienceBandFilter, techStack: techStackFilter,
     dateFilter, searchFilter,
