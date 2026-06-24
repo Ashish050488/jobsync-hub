@@ -6,7 +6,7 @@ import {
   addCuratedJob, deleteJobById,
 } from '../Db/jobs/index.js';
 import { getCompanyDirectoryStats, getCompanyIntel } from '../Db/companies/index.js';
-import { getSimilarJobs, getMarketPulse, getHiringLeaderboard, getHiringTrends } from '../Db/analytics/index.js';
+import { getSimilarJobs, getMarketPulse } from '../Db/analytics/index.js';
 import { asyncHandler } from '../middleware/asyncHandler.js';
 import { authenticate, requireAdmin } from '../middleware/authMiddleware.js';
 import { HttpError } from '../middleware/errorHandler.js';
@@ -56,18 +56,6 @@ jobsApiRouter.get('/company-intel/:companyName', asyncHandler(async (req, res) =
 jobsApiRouter.get('/similar/:jobId', asyncHandler(async (req, res) => {
   if (!ObjectId.isValid(req.params.jobId)) throw new HttpError(400, 'Invalid ID');
   res.json(await getSimilarJobs(req.params.jobId));
-}));
-
-jobsApiRouter.get('/hiring-leaderboard', asyncHandler(async (_req, res) => {
-  const data = await getHiringLeaderboard();
-  res.set('Cache-Control', 'public, max-age=1800, s-maxage=3600');
-  res.json(data);
-}));
-
-jobsApiRouter.get('/trends', asyncHandler(async (_req, res) => {
-  const data = await getHiringTrends();
-  res.set('Cache-Control', 'public, max-age=1800, s-maxage=3600');
-  res.json(data);
 }));
 
 // /:id — must come after all named GET paths
