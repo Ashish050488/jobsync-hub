@@ -11,6 +11,9 @@ The JobSync API serves as the central nervous system for the JobSync platform. E
 
 At its core, this service manages a **Proprietary Market Data Aggregation Engine**, which continuously ingests, normalizes, and categorizes employment data from across the web. Using advanced AI-driven semantic analysis, we ensure that raw market signals are translated into highly accurate, structured data that seamlessly matches candidates to optimal roles.
 
+## Project conventions
+This project follows the rules in `NAMING-CONVENTIONS.md` at the repo root. Every contributor (including AI assistants) must read sections 0, 2, 3, and 4 before writing code. The two-audience boundary (seeker / employer / public) is enforced by folder structure — see section 0.
+
 ## ✨ Core Capabilities
 
 *   **Intelligent Data Aggregation Pipeline:** A resilient, distributed ingestion layer that systematically processes millions of data points across global employment markets, ensuring near real-time data synchronization.
