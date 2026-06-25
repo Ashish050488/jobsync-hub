@@ -1,11 +1,11 @@
-// FILE: src/middleware/authMiddleware.js
+// FILE: src/middleware/require-seeker-middleware.js
 // Verifies the auth cookie and attaches req.user. requireAdmin uses ADMIN_EMAILS.
 
 import jwt from 'jsonwebtoken';
 import { JWT_SECRET, ADMIN_EMAILS } from '../env.js';
-import { HttpError } from './errorHandler.js';
+import { HttpError } from './error-handler-middleware.js';
 
-export function authenticate(req, _res, next) {
+export function requireSeeker(req, _res, next) {
   const token = req.cookies?.tj_token;
   if (!token) return next(new HttpError(401, 'Unauthorized'));
   try {
@@ -38,5 +38,4 @@ export function optionalAuth(req, _res, next) {
   next();
 }
 
-export const requireAuth = authenticate;
-export default authenticate;
+export default requireSeeker;

@@ -2,13 +2,13 @@
 import { Router } from 'express';
 import { col } from '../Db/connection.js';
 import { cleanJobDescription } from '../core/cleanJobDescription/index.js';
-import { asyncHandler } from '../middleware/asyncHandler.js';
-import { authenticate, requireAdmin } from '../middleware/authMiddleware.js';
+import { asyncHandler } from '../middleware/async-handler-middleware.js';
+import { requireSeeker, requireAdmin } from '../middleware/require-seeker-middleware.js';
 
 const router = Router();
 
 // Every admin endpoint requires both: a valid auth cookie AND admin email.
-router.use(authenticate, requireAdmin);
+router.use(requireSeeker, requireAdmin);
 
 // POST /api/admin/reclean-descriptions — re-run cleanJobDescription across the corpus.
 router.post('/reclean-descriptions', asyncHandler(async (_req, res) => {

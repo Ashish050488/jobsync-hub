@@ -1,13 +1,13 @@
-// FILE: src/models/jobModel.js
+// FILE: src/models/shared/job-model.js
 // Pure-JS job factory. Previous version used Mongoose for schema + hooks,
 // but `saveJobs` always wrote via the native driver bulkWrite, so hooks
 // never actually fired — they were dead code. Removed.
 //
 // `ensureJobIndexes` is kept; it now creates indexes via the native driver.
 
-import { col } from '../Db/connection.js';
-import { cleanJobDescription } from '../core/cleanJobDescription/index.js';
-import { generateJobTags, getPlainTextForTagging } from '../core/jobTags/index.js';
+import { col } from '../../Db/connection.js';
+import { cleanJobDescription } from '../../core/cleanJobDescription/index.js';
+import { generateJobTags, getPlainTextForTagging } from '../../core/jobTags/index.js';
 
 /** Authoritative shape of a job document. Drives field defaults + casting. */
 export const jobSchemaDefinition = {

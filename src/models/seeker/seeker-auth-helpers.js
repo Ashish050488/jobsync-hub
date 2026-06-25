@@ -1,7 +1,7 @@
-// FILE: src/models/user/auth.js
+// FILE: src/models/seeker/seeker-auth-helpers.js
 // Identity / lookups. Index setup lives here too.
 
-import { usersCol, toOid, normaliseApplied } from './_shared.js';
+import { usersCol, toOid, normaliseApplied } from './seeker-user-shared-helpers.js';
 
 function slugify(str) {
   return String(str || '')

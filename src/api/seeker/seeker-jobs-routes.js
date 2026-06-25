@@ -1,15 +1,15 @@
-// FILE: src/api/jobs.routes.js
+// FILE: src/api/seeker/seeker-jobs-routes.js
 import { Router } from 'express';
 import { ObjectId } from 'mongodb';
 import {
   getJobsPaginated, getPublicBaitJobs, findJobById,
   addCuratedJob, deleteJobById,
-} from '../Db/jobs/index.js';
-import { getCompanyDirectoryStats, getCompanyIntel } from '../Db/companies/index.js';
-import { getSimilarJobs, getMarketPulse } from '../Db/analytics/index.js';
-import { asyncHandler } from '../middleware/asyncHandler.js';
-import { authenticate, requireAdmin } from '../middleware/authMiddleware.js';
-import { HttpError } from '../middleware/errorHandler.js';
+} from '../../Db/jobs/index.js';
+import { getCompanyDirectoryStats, getCompanyIntel } from '../../Db/companies/index.js';
+import { getSimilarJobs, getMarketPulse } from '../../Db/analytics/index.js';
+import { asyncHandler } from '../../middleware/async-handler-middleware.js';
+import { requireSeeker, requireAdmin } from '../../middleware/require-seeker-middleware.js';
+import { HttpError } from '../../middleware/error-handler-middleware.js';
 
 export const jobsApiRouter = Router();
 
@@ -69,7 +69,7 @@ jobsApiRouter.get('/:id', asyncHandler(async (req, res) => {
 
 // ─── ADMIN ROUTES ──────────────────────────────────────────────────
 
-jobsApiRouter.post('/', authenticate, requireAdmin, asyncHandler(async (req, res) => {
+jobsApiRouter.post('/', requireSeeker, requireAdmin, asyncHandler(async (req, res) => {
   try {
     const newJob = await addCuratedJob(req.body || {});
     res.status(201).json(newJob);
@@ -79,7 +79,7 @@ jobsApiRouter.post('/', authenticate, requireAdmin, asyncHandler(async (req, res
   }
 }));
 
-jobsApiRouter.delete('/:id', authenticate, requireAdmin, asyncHandler(async (req, res) => {
+jobsApiRouter.delete('/:id', requireSeeker, requireAdmin, asyncHandler(async (req, res) => {
   const { id } = req.params;
   if (!ObjectId.isValid(id)) throw new HttpError(400, 'Invalid ID');
   await deleteJobById(id);

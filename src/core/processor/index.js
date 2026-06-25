@@ -5,7 +5,7 @@ import fetch from 'node-fetch';
 import { JSDOM } from 'jsdom';
 import { AbortController } from 'abort-controller';
 
-import { createJobModel } from '../../models/jobModel.js';
+import { createJobModel } from '../../models/shared/job-model.js';
 import { selectMapper } from './mappers/index.js';
 import { isSpamOrIrrelevant, isTechRole, inferExperienceLevel } from './filters.js';
 

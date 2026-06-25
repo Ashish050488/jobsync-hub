@@ -1,10 +1,10 @@
-// FILE: src/api/news.routes.js
+// FILE: src/api/seeker/news-routes.js
 // Tech / job-market news proxied from the public Hacker News (Algolia) API.
 // Cached in-memory for 60 min so we never hit the upstream on every page load,
 // and so no third-party key/host is exposed to the browser.
 import { Router } from 'express';
 import fetch from 'node-fetch';
-import { asyncHandler } from '../middleware/asyncHandler.js';
+import { asyncHandler } from '../../middleware/async-handler-middleware.js';
 
 const router = Router();
 

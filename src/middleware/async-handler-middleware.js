@@ -1,4 +1,4 @@
-// FILE: src/middleware/asyncHandler.js
+// FILE: src/middleware/async-handler-middleware.js
 // Removes the try/catch boilerplate from every route. Pass an async handler,
 // any thrown error is forwarded to Express's error middleware.
 

@@ -1,11 +1,11 @@
-// FILE: src/api/auth.routes.js
+// FILE: src/api/seeker/seeker-auth-routes.js
 import { Router } from 'express';
 import { OAuth2Client } from 'google-auth-library';
 import jwt from 'jsonwebtoken';
-import { GOOGLE_CLIENT_ID, JWT_SECRET, IS_PRODUCTION } from '../env.js';
-import { findOrCreateGoogleUser, getUserById } from '../models/user/index.js';
-import { asyncHandler } from '../middleware/asyncHandler.js';
-import { HttpError } from '../middleware/errorHandler.js';
+import { GOOGLE_CLIENT_ID, JWT_SECRET, IS_PRODUCTION } from '../../env.js';
+import { findOrCreateGoogleUser, getUserById } from '../../models/seeker/index.js';
+import { asyncHandler } from '../../middleware/async-handler-middleware.js';
+import { HttpError } from '../../middleware/error-handler-middleware.js';
 
 const router = Router();
 const googleClient = new OAuth2Client(GOOGLE_CLIENT_ID);

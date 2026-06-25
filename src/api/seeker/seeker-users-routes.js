@@ -1,4 +1,4 @@
-// FILE: src/api/users.routes.js
+// FILE: src/api/seeker/seeker-users-routes.js
 // Legacy router. All endpoints under /api/users have been migrated to /api/me.
 // Catch-all middleware — works in both Express 4 and 5 (no path = matches everything).
 

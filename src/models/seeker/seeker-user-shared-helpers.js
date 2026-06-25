@@ -1,4 +1,4 @@
-// FILE: src/models/user/_shared.js
+// FILE: src/models/seeker/seeker-user-shared-helpers.js
 // Internal helpers shared across user/* modules. Not re-exported from the barrel.
 
 import { ObjectId } from 'mongodb';

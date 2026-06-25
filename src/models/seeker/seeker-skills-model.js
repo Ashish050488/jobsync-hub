@@ -1,5 +1,5 @@
-// FILE: src/models/user/skills.js
-import { usersCol, toOid } from './_shared.js';
+// FILE: src/models/seeker/seeker-skills-model.js
+import { usersCol, toOid } from './seeker-user-shared-helpers.js';
 
 /**
  * Replace the user's skills array. Trims, dedupes, caps at 100.

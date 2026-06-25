@@ -1,4 +1,4 @@
-// FILE: src/middleware/errorHandler.js
+// FILE: src/middleware/error-handler-middleware.js
 // Central error responder. Sits at the bottom of the middleware stack.
 
 import { IS_PRODUCTION } from '../env.js';

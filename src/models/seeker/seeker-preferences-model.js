@@ -1,7 +1,7 @@
-// FILE: src/models/user/preferences.js
+// FILE: src/models/seeker/seeker-preferences-model.js
 // Daily goal + last-visit tracking.
 
-import { usersCol, toOid } from './_shared.js';
+import { usersCol, toOid } from './seeker-user-shared-helpers.js';
 
 /**
  * Touch lastVisitAt. Returns { previousVisitAt, updatedVisitAt }.

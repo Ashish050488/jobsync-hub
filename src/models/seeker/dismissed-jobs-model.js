@@ -1,7 +1,7 @@
-// FILE: src/models/user/dismissed.js
+// FILE: src/models/seeker/dismissed-jobs-model.js
 // Per-user "not interested" list. Uses $addToSet so duplicates are impossible.
 
-import { usersCol, toOid } from './_shared.js';
+import { usersCol, toOid } from './seeker-user-shared-helpers.js';
 
 export async function getDismissedJobs(userId) {
   const oid = toOid(userId);

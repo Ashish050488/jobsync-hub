@@ -8,20 +8,20 @@ import cron from 'node-cron';
 
 import { PORT, FRONTEND_URL, RUN_SCRAPER_ON_START } from './env.js';
 import { connectToDb, closeDb } from './Db/connection.js';
-import { ensureUserIndexes } from './models/user/index.js';
-import { ensureJobIndexes } from './models/jobModel.js';
+import { ensureUserIndexes } from './models/seeker/index.js';
+import { ensureJobIndexes } from './models/shared/job-model.js';
 
 import { runScraper } from './tasks/runScraper.js';
 
-import authRouter from './api/auth.routes.js';
-import meRouter from './api/me.routes.js';
-import { jobsApiRouter } from './api/jobs.routes.js';
-import usersRouter from './api/users.routes.js';
+import authRouter from './api/seeker/seeker-auth-routes.js';
+import meRouter from './api/seeker/seeker-me-routes.js';
+import { jobsApiRouter } from './api/seeker/seeker-jobs-routes.js';
+import usersRouter from './api/seeker/seeker-users-routes.js';
 import adminRouter from './api/admin.routes.js';
-import newsRouter from './api/news.routes.js';
+import newsRouter from './api/seeker/news-routes.js';
 
-import { authenticate } from './middleware/authMiddleware.js';
-import { notFound, errorHandler } from './middleware/errorHandler.js';
+import { requireSeeker } from './middleware/require-seeker-middleware.js';
+import { notFound, errorHandler } from './middleware/error-handler-middleware.js';
 
 const app = express();
 
@@ -34,12 +34,12 @@ app.use(cookieParser());
 app.get('/', (_req, res) => res.send('Job Scraper Backend running.'));
 
 // ─── Routes ───────────────────────────────────────────────────────
-app.use('/api/auth', authRouter);
-app.use('/api/me', authenticate, meRouter);
-app.use('/api/jobs', jobsApiRouter);
-app.use('/api/users', usersRouter); // legacy 410 wildcard
+app.use('/api/seeker/auth', authRouter);
+app.use('/api/seeker/me', requireSeeker, meRouter);
+app.use('/api/seeker/jobs', jobsApiRouter);
+app.use('/api/seeker/users', usersRouter); // legacy 410 wildcard
 app.use('/api/admin', adminRouter);
-app.use('/api/news', newsRouter);
+app.use('/api/seeker/news', newsRouter);
 
 // ─── 404 + central error handler (must be last) ───────────────────
 app.use(notFound);

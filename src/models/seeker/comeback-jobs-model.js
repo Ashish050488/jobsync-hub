@@ -1,7 +1,7 @@
-// FILE: src/models/user/comeback.js
+// FILE: src/models/seeker/comeback-jobs-model.js
 // "Save for later" bookmarks with optional notes.
 
-import { usersCol, toOid } from './_shared.js';
+import { usersCol, toOid } from './seeker-user-shared-helpers.js';
 
 export async function getComeBackTo(userId) {
   const oid = toOid(userId);

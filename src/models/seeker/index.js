@@ -1,8 +1,8 @@
-// FILE: src/models/user/index.js
+// FILE: src/models/seeker/index.js
 // Barrel. New code should import from here.
-export * from './auth.js';
-export * from './applied.js';
-export * from './skills.js';
-export * from './preferences.js';
-export * from './comeback.js';
-export * from './dismissed.js';
+export * from './seeker-auth-helpers.js';
+export * from './applied-jobs-model.js';
+export * from './seeker-skills-model.js';
+export * from './seeker-preferences-model.js';
+export * from './comeback-jobs-model.js';
+export * from './dismissed-jobs-model.js';

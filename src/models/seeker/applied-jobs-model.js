@@ -1,9 +1,9 @@
-// FILE: src/models/user/applied.js
+// FILE: src/models/seeker/applied-jobs-model.js
 // Applied-jobs list, stages, and enriched details.
 
 import { ObjectId } from 'mongodb';
 import { connectToDb } from '../../Db/connection.js';
-import { usersCol, toOid, normaliseApplied, VALID_STAGES } from './_shared.js';
+import { usersCol, toOid, normaliseApplied, VALID_STAGES } from './seeker-user-shared-helpers.js';
 
 /** Return the user's applied jobs array (normalised). */
 export async function getAppliedJobs(userId) {

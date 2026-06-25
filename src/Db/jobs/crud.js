@@ -4,7 +4,7 @@
 import { ObjectId } from 'mongodb';
 import { col } from '../connection.js';
 import { SITES_CONFIG } from '../../config.js';
-import { createJobModel } from '../../models/jobModel.js';
+import { createJobModel } from '../../models/shared/job-model.js';
 import { cleanJobDescription } from '../../core/cleanJobDescription/index.js';
 import { generateJobTags, getPlainTextForTagging } from '../../core/jobTags/index.js';
 

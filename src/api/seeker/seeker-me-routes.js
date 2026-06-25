@@ -1,5 +1,5 @@
-// FILE: src/api/me.routes.js
-// All routes here assume req.user.userId is set by the authenticate middleware.
+// FILE: src/api/seeker/seeker-me-routes.js
+// All routes here assume req.user.userId is set by the requireSeeker middleware.
 
 import { Router } from 'express';
 import {
@@ -9,10 +9,10 @@ import {
   getComeBackTo, upsertComeBackTo, removeComeBackTo,
   setDailyGoal,
   getDismissedJobs, addDismissedJob, removeDismissedJob,
-} from '../models/user/index.js';
-import { findJobById } from '../Db/jobs/queries.js';
-import { asyncHandler } from '../middleware/asyncHandler.js';
-import { HttpError } from '../middleware/errorHandler.js';
+} from '../../models/seeker/index.js';
+import { findJobById } from '../../Db/jobs/queries.js';
+import { asyncHandler } from '../../middleware/async-handler-middleware.js';
+import { HttpError } from '../../middleware/error-handler-middleware.js';
 
 const VALID_STAGES = ['applied', 'screening', 'interview', 'offer', 'accepted', 'rejected', 'ghosted'];
 const router = Router();
