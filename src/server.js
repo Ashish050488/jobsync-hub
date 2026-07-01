@@ -40,8 +40,11 @@ import { createEmployerAuthRouter } from './api/employer/employer-auth-routes.js
 import employerCompanyRouter from './api/employer/employer-company-routes.js';
 import employerPostingsRouter from './api/employer/employer-postings-routes.js';
 import dpdpRouter from './api/dpdp/dpdp-routes.js';
+import seekerResumeRouter from './api/seeker/seeker-resume-routes.js';
+import seekerProfileRouter from './api/seeker/seeker-profile-routes.js';
 
 import { requireSeeker } from './middleware/require-seeker-middleware.js';
+import { requireConsentForPurpose } from './middleware/require-consent-middleware.js';
 import { requireEmployer } from './middleware/require-employer-middleware.js';
 import { requireEmployerCompany } from './middleware/require-employer-company-middleware.js';
 import { notFound, errorHandler } from './middleware/error-handler-middleware.js';
@@ -63,6 +66,8 @@ app.use('/api/seeker/jobs', jobsApiRouter);
 app.use('/api/seeker/users', usersRouter); // legacy 410 wildcard
 app.use('/api/admin', adminRouter);
 app.use('/api/seeker/news', newsRouter);
+app.use('/api/seeker/resume', requireSeeker, requireConsentForPurpose('resume_parsing'), seekerResumeRouter);
+app.use('/api/seeker/profile', requireSeeker, seekerProfileRouter);
 app.use('/api/employer/auth', createEmployerAuthRouter());
 app.use('/api/employer/company', requireEmployer, employerCompanyRouter);
 app.use('/api/employer/jobs', requireEmployer, requireEmployerCompany, employerPostingsRouter);
