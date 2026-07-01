@@ -1,0 +1,110 @@
+// FILE: tests/api/employer-postings-routes.test.js
+import './../_helpers/test-db.js';
+import { test, before, beforeEach, after } from 'node:test';
+import assert from 'node:assert/strict';
+import express from 'express';
+import cookieParser from 'cookie-parser';
+import request from 'supertest';
+import jwt from 'jsonwebtoken';
+
+import { dropCollections, closeTestDb } from '../_helpers/test-db.js';
+import { col } from '../../src/Db/connection.js';
+import { EMPLOYER_JWT_SECRET } from '../../src/env.js';
+import { errorHandler } from '../../src/middleware/error-handler-middleware.js';
+import { requireEmployer } from '../../src/middleware/require-employer-middleware.js';
+import { requireEmployerCompany } from '../../src/middleware/require-employer-company-middleware.js';
+import employerPostingsRouter from '../../src/api/employer/employer-postings-routes.js';
+import {
+  ensureCompanyIndexes, ensureEmployerUserIndexes, ensurePostingIndexes,
+  findOrCreateEmployerGoogleUser, createCompany, linkCompanyToEmployerUser,
+} from '../../src/models/employer/index.js';
+
+const VALID_BODY = {
+  title: 'React Developer', description: 'x'.repeat(60), location: 'Bangalore',
+  workplaceType: 'remote', employmentType: 'full-time',
+};
+
+function buildApp() {
+  const app = express();
+  app.use(express.json());
+  app.use(cookieParser());
+  app.use('/api/employer/jobs', requireEmployer, requireEmployerCompany, employerPostingsRouter);
+  app.use(errorHandler);
+  return app;
+}
+
+async function onboardedCookie(tag) {
+  const user = await findOrCreateEmployerGoogleUser({ googleId: `g-${tag}`, email: `o${tag}@acme.com`, name: 'Owner', picture: null });
+  const company = await createCompany({ name: `Acme ${tag}` }, user._id);
+  await linkCompanyToEmployerUser(user._id, company._id);
+  const token = jwt.sign({ employerUserId: user._id.toString(), email: user.email }, EMPLOYER_JWT_SECRET);
+  return { cookie: `jm_employer_token=${token}`, company };
+}
+
+before(async () => { await reset(); });
+beforeEach(async () => { await reset(); });
+after(async () => { await closeTestDb(); });
+async function reset() {
+  await dropCollections('jobs', 'companies', 'employer_users');
+  await ensureCompanyIndexes(); await ensureEmployerUserIndexes(); await ensurePostingIndexes();
+}
+
+test('POST creates a posting → 201 with the full public shape', async () => {
+  const { cookie } = await onboardedCookie('a');
+  const res = await request(buildApp()).post('/api/employer/jobs').set('Cookie', cookie)
+    .send({ ...VALID_BODY, salaryMin: 100000, salaryMax: 200000 });
+  assert.equal(res.status, 201);
+  const { posting } = res.body;
+  assert.equal(posting.slug, 'react-developer');
+  assert.equal(posting.status, 'active');
+  assert.equal(posting.salaryCurrency, 'INR');
+  assert.equal(posting.salaryMin, 100000);
+  assert.ok(posting.postedAt);
+  for (const field of ['id', 'title', 'description', 'descriptionPlain', 'location',
+    'workplaceType', 'employmentType', 'status', 'createdAt', 'updatedAt']) {
+    assert.ok(field in posting, `missing field ${field}`);
+  }
+  assert.equal('companyId' in posting, false); // owner field never exposed
+});
+
+test('GET lists only this company, filters by status, excludes scraped jobs', async () => {
+  const { cookie, company } = await onboardedCookie('b');
+  const app = buildApp();
+  await request(app).post('/api/employer/jobs').set('Cookie', cookie).send(VALID_BODY);
+  await request(app).post('/api/employer/jobs').set('Cookie', cookie)
+    .send({ ...VALID_BODY, title: 'Designer', status: 'draft' });
+  // A scraped job (PascalCase, source:'scraped') sharing the companyId must not leak.
+  const jobs = await col('jobs');
+  await jobs.insertOne({ JobTitle: 'Scraped', Company: 'X', source: 'scraped', companyId: company._id, Status: 'active' });
+
+  const other = await onboardedCookie('b2');
+  await request(app).post('/api/employer/jobs').set('Cookie', other.cookie).send(VALID_BODY);
+
+  const all = await request(app).get('/api/employer/jobs').set('Cookie', cookie);
+  assert.equal(all.body.postings.length, 2);
+  assert.equal(all.body.postings.some((posting) => posting.title === 'Scraped'), false);
+
+  const drafts = await request(app).get('/api/employer/jobs?status=draft').set('Cookie', cookie);
+  assert.equal(drafts.body.postings.length, 1);
+  assert.equal(drafts.body.postings[0].title, 'Designer');
+});
+
+test('GET :postingId returns the single posting', async () => {
+  const { cookie } = await onboardedCookie('c');
+  const app = buildApp();
+  const created = await request(app).post('/api/employer/jobs').set('Cookie', cookie).send(VALID_BODY);
+  const res = await request(app).get(`/api/employer/jobs/${created.body.posting.id}`).set('Cookie', cookie);
+  assert.equal(res.status, 200);
+  assert.equal(res.body.posting.slug, 'react-developer');
+});
+
+test('close then reopen drives the status state machine', async () => {
+  const { cookie } = await onboardedCookie('d');
+  const app = buildApp();
+  const created = await request(app).post('/api/employer/jobs').set('Cookie', cookie).send(VALID_BODY);
+  const id = created.body.posting.id;
+  const closed = await request(app).post(`/api/employer/jobs/${id}/close`).set('Cookie', cookie);
+  assert.equal(closed.body.posting.status, 'closed');
+  const reopened = await request(app).post(`/api/employer/jobs/${id}/reopen`).set('Cookie', cookie);
+  assert.equal(reopened.body.posting.status, 'active');
+});

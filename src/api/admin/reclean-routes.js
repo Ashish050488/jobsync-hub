@@ -1,16 +1,16 @@
-// FILE: src/api/admin.routes.js
+// FILE: src/api/admin/reclean-routes.js
+// Admin maintenance: re-run cleanJobDescription across the job corpus.
+// Moved verbatim from the old admin.routes.js; the mounted URL is unchanged
+// (POST /api/admin/reclean-descriptions).
+
 import { Router } from 'express';
-import { col } from '../Db/connection.js';
-import { cleanJobDescription } from '../core/cleanJobDescription/index.js';
-import { asyncHandler } from '../middleware/async-handler-middleware.js';
-import { requireSeeker, requireAdmin } from '../middleware/require-seeker-middleware.js';
+import { col } from '../../Db/connection.js';
+import { cleanJobDescription } from '../../core/cleanJobDescription/index.js';
+import { asyncHandler } from '../../middleware/async-handler-middleware.js';
 
 const router = Router();
 
-// Every admin endpoint requires both: a valid auth cookie AND admin email.
-router.use(requireSeeker, requireAdmin);
-
-// POST /api/admin/reclean-descriptions — re-run cleanJobDescription across the corpus.
+// POST /api/admin/reclean-descriptions
 router.post('/reclean-descriptions', asyncHandler(async (_req, res) => {
   const jobs = await col('jobs');
   const query = {

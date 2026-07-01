@@ -10,7 +10,8 @@
     "validate": "node src/tasks/runValidator.js",
     "match": "node src/tasks/runMatcher.js",
     "migrate:auto-tags": "node scripts/migrate-auto-tags.js",
-    "migrate:clean-descriptions": "node scripts/migrate-clean-descriptions.js"
+    "migrate:clean-descriptions": "node scripts/migrate-clean-descriptions.js",
+    "test:backend": "node --test --test-concurrency=1 \"tests/**/*.test.js\""
   },
   "keywords": [],
   "author": "",
@@ -26,6 +27,7 @@
     "csv-parser": "^3.2.0",
     "dotenv": "^17.2.3",
     "express": "^5.1.0",
+    "express-rate-limit": "^8.5.2",
     "express-validator": "^7.3.1",
     "fast-xml-parser": "^5.8.0",
     "google-auth-library": "^10.6.2",
@@ -41,6 +43,7 @@
     "playwright": "^1.55.0"
   },
   "devDependencies": {
-    "nodemon": "^3.1.10"
+    "nodemon": "^3.1.10",
+    "supertest": "^7.2.2"
   }
 }

@@ -19,6 +19,12 @@ export const MONGO_URI = required('MONGO_URI');
 export const GOOGLE_CLIENT_ID = required('GOOGLE_CLIENT_ID');
 export const JWT_SECRET = required('JWT_SECRET');
 
+// Employer auth — fully separate identity stack from the seeker JWT_SECRET.
+// A leaked/forged seeker token must never authenticate against employer routes.
+export const EMPLOYER_JWT_SECRET = required('EMPLOYER_JWT_SECRET');
+export const EMPLOYER_COOKIE_NAME = 'jm_employer_token';
+export const EMPLOYER_JWT_EXPIRY = '7d'; // matches seeker for consistency
+
 export const NODE_ENV = process.env.NODE_ENV || 'development';
 export const IS_PRODUCTION = NODE_ENV === 'production';
 export const PORT = parseInt(process.env.PORT, 10) || 3000;
@@ -33,6 +39,25 @@ export const ADMIN_EMAILS = (process.env.ADMIN_EMAILS || '')
 
 // Whether to run the scraper once at startup. Default off in development.
 export const RUN_SCRAPER_ON_START = process.env.RUN_SCRAPER_ON_START === 'true';
+
+// ─── DPDP compliance (Step 4.5A) ──────────────────────────────────
+// noticeVersion pins each consent to the notice text the user agreed to.
+export const DPDP_NOTICE_VERSION = process.env.DPDP_NOTICE_VERSION
+  || (IS_PRODUCTION ? required('DPDP_NOTICE_VERSION') : 'v1.0-2026-07');
+export const DPDP_POLICY_URL = process.env.DPDP_POLICY_URL
+  || (IS_PRODUCTION ? required('DPDP_POLICY_URL') : '/legal/privacy');
+export const DPDP_GRIEVANCE_OFFICER_EMAIL = process.env.DPDP_GRIEVANCE_OFFICER_EMAIL
+  || (IS_PRODUCTION ? required('DPDP_GRIEVANCE_OFFICER_EMAIL') : 'privacy@jobmesh.in');
+// Reflects our use of Google AI Studio (cross-border processing).
+export const DPDP_CROSS_BORDER_ENABLED = (process.env.DPDP_CROSS_BORDER_ENABLED ?? 'true') !== 'false';
+
+// ─── Gemma JD extraction (Step 4.6) ───────────────────────────────
+// Comma-separated API keys, ideally from DIFFERENT GCP projects (separate quota
+// buckets, R2). All three have safe defaults so the server boots without them —
+// extraction is simply disabled when no keys are configured.
+export const GEMMA_API_KEYS = process.env.GEMMA_API_KEYS || '';
+export const GEMMA_MODEL = process.env.GEMMA_MODEL || 'gemma-4-26b-a4b-it';
+export const GEMMA_BASE_URL = process.env.GEMMA_BASE_URL || 'https://generativelanguage.googleapis.com/v1beta';
 
 // SMTP config is optional — only used if EMAIL_USER + EMAIL_PASS are set.
 export const EMAIL_CONFIG = process.env.EMAIL_USER && process.env.EMAIL_PASS
