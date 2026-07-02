@@ -39,13 +39,17 @@ import newsRouter from './api/seeker/news-routes.js';
 import { createEmployerAuthRouter } from './api/employer/employer-auth-routes.js';
 import employerCompanyRouter from './api/employer/employer-company-routes.js';
 import employerPostingsRouter from './api/employer/employer-postings-routes.js';
+import employerApplicantRouter from './api/employer/employer-applicant-routes.js';
+import employerStagesRouter from './api/employer/employer-stages-routes.js';
+import employerArchiveReasonsRouter from './api/employer/employer-archive-reasons-routes.js';
+import resumeDownloadRouter from './api/public/resume-download-route.js';
 import dpdpRouter from './api/dpdp/dpdp-routes.js';
 import seekerResumeRouter from './api/seeker/seeker-resume-routes.js';
 import seekerProfileRouter from './api/seeker/seeker-profile-routes.js';
 import publicApplyRouter from './api/public/public-apply-routes.js';
 import {
   ensureContactIndexes, ensureApplicationIndexes,
-  ensureStageChangeIndexes, ensureResumeFileIndexes,
+  ensureStageChangeIndexes, ensureResumeFileIndexes, ensureResumeScoreIndexes,
 } from './models/public/index.js';
 import { ensureResumeDirectory } from './services/public/resume-storage-service.js';
 
@@ -77,7 +81,11 @@ app.use('/api/seeker/profile', requireSeeker, seekerProfileRouter);
 app.use('/api/employer/auth', createEmployerAuthRouter());
 app.use('/api/employer/company', requireEmployer, employerCompanyRouter);
 app.use('/api/employer/jobs', requireEmployer, requireEmployerCompany, employerPostingsRouter);
+app.use('/api/employer/applicants', requireEmployer, requireEmployerCompany, employerApplicantRouter);
+app.use('/api/employer/stages', requireEmployer, requireEmployerCompany, employerStagesRouter);
+app.use('/api/employer/archive-reasons', requireEmployer, requireEmployerCompany, employerArchiveReasonsRouter);
 app.use('/api/dpdp', dpdpRouter); // per-route guards (D9) — /notice-version is public
+app.use('/api/public/resume-download', resumeDownloadRouter); // signed-token PDF stream (before the apply catch-all)
 app.use('/api/public', publicApplyRouter); // unauthenticated candidate apply pages
 
 // ─── 404 + central error handler (must be last) ───────────────────
@@ -103,6 +111,7 @@ const server = app.listen(PORT, async () => {
     await ensureApplicationIndexes();
     await ensureStageChangeIndexes();
     await ensureResumeFileIndexes();
+    await ensureResumeScoreIndexes();
     ensureResumeDirectory();
 
     // Gemma JD extraction is optional — the server boots fine without keys.

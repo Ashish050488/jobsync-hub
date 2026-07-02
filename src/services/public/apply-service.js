@@ -14,6 +14,7 @@ import {
 } from '../../models/public/index.js';
 import * as defaultStorage from './resume-storage-service.js';
 import { validateApplicationForm, isHoneypotFilled } from './apply-validators.js';
+import { scoreApplication } from './scoring-service.js';
 
 /**
  * Process an application. `resume` is { buffer, originalFilename, mimeType }.
@@ -59,6 +60,10 @@ export async function processApplication(companySlug, jobSlug, form, resume, met
       applicationId: application._id, fromStageId: null, toStageId: defaultStage._id,
       movedByUserId: null, note: 'Application received',
     });
+
+    // Fire-and-forget AI scoring (D4/C8): never blocks or fails the application.
+    scoreApplication(application._id)
+      .catch((err) => console.warn('[scoring] failed:', err.message));
 
     return { applicationId: application._id.toString() };
   } catch (err) {

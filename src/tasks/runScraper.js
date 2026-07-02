@@ -4,6 +4,7 @@
 import { SITES_CONFIG } from '../config.js';
 import { loadAllExistingIDs, deleteOldJobs, deleteExpiredJobs } from '../Db/jobs/index.js';
 import { scrapeSite } from '../core/scraperEngine.js';
+import { runExtractionForNewJobs } from './scraper-extraction-hook.js';
 
 let isScraping = false;
 
@@ -25,6 +26,8 @@ export async function runScraper() {
         await scrapeSite(siteConfig, existingIDsMap);
 
       console.log(`[${siteConfig.siteName}] ${newJobs.length} new jobs`);
+
+      await runExtractionForNewJobs(siteConfig.siteName, newJobs);
 
       if (scrapedSuccessfully && seenJobIds.size > 0) {
         await deleteExpiredJobs(siteConfig.siteName, seenJobIds);

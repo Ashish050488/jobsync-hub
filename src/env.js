@@ -25,6 +25,13 @@ export const EMPLOYER_JWT_SECRET = required('EMPLOYER_JWT_SECRET');
 export const EMPLOYER_COOKIE_NAME = 'jm_employer_token';
 export const EMPLOYER_JWT_EXPIRY = '7d'; // matches seeker for consistency
 
+// Secret for signing resume-download URLs (HMAC-SHA256). Production MUST set this
+// explicitly; the EMPLOYER_JWT_SECRET fallback is a dev convenience only (both are
+// server-side secrets), and the last literal keeps tests/boot working with neither.
+export const RESUME_URL_SECRET = process.env.RESUME_URL_SECRET
+  || process.env.EMPLOYER_JWT_SECRET
+  || 'dev-resume-secret';
+
 export const NODE_ENV = process.env.NODE_ENV || 'development';
 export const IS_PRODUCTION = NODE_ENV === 'production';
 export const PORT = parseInt(process.env.PORT, 10) || 3000;
